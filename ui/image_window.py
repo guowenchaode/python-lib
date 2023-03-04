@@ -5,14 +5,10 @@ import sys
 import time
 from PIL import ImageTk, Image
 
-# 分辨率
 resolution = (960, 600)
-# 路径
 Path = sys.argv[1]
 Start = sys.argv[2]
-# 播放间隔.单位:s
 Interval = 2
-# 当前照片计数
 Index = 0
 
 scaler = Image.ANTIALIAS
@@ -21,7 +17,6 @@ win = tk.Tk()
 win_width = 1050
 win_height = 650
 
-# 将窗口设置在屏幕居中位置
 sw = win.winfo_screenwidth()
 sh = win.winfo_screenheight()
 x = (sw - win_width) / 2
@@ -40,7 +35,6 @@ win.geometry("%dx%d+%d+%d" % (win_width, win_height, x, y))
 bg = tk.Label(win, bg='#DDDDDD')
 bg.place(height=win_height, width=win_width, x=0, y=0)
 
-# 选择文件夹内的第一张图片名称
 img_in = Image.open(f"{Path}/{Start}")
 w, h = img_in.size
 size_new = ((int)(w * resolution[1] / h), resolution[1])
@@ -51,14 +45,12 @@ panel = tk.Label(win, image=img)
 panel.pack(side="bottom", fill="both", expand="yes")
 
 
-# 手动播放
 def manual_img(e):
     global Index
 
     files = os.listdir(Path)
     i = 0
     for x in files:
-        # 判断文件是否存在
         if not os.path.isfile(Path + '\%s' % x):
             break
 
@@ -91,7 +83,6 @@ def manual_img(e):
 
 win.bind("<Button-1>", manual_img)
 
-# 切换图片
 
 
 def image_change():
@@ -102,7 +93,6 @@ def image_change():
         files = os.listdir(Path)
         i = 0
         for x in files:
-            # 判断文件是否存在
             if not os.path.isfile(Path + '\%s' % x):
                 break
 
@@ -110,7 +100,7 @@ def image_change():
                 i += 1
                 continue
 
-            print('播放图片', x, Index)
+            print('show image', x, Index)
             if not (x.endswith('.jpg') or x.endswith('.JPG')):
                 i += 1
                 Index += 1
@@ -133,18 +123,17 @@ def image_change():
 
 
 def start_img():
-    # 图片切换线程
     t = threading.Thread(target=image_change)
     t.start()
 
 
-bt_start = tk.Button(win, text="开始播放", command=start_img)
+bt_start = tk.Button(win, text="start", command=start_img)
 bt_start.place(x=img_box_x + img_box_w / 2, y=img_box_y + img_box_h + 20)
 
-bt_stop = tk.Button(win, text="退出播放", command=win.quit)
+bt_stop = tk.Button(win, text="exit", command=win.quit)
 bt_stop.place(x=img_box_x + img_box_w / 2-70, y=img_box_y + img_box_h + 20)
 
-bt_manual = tk.Button(win, text="手动播放", command=manual_img)
+bt_manual = tk.Button(win, text="manu", command=manual_img)
 bt_manual.place(x=img_box_x + img_box_w / 2-140, y=img_box_y + img_box_h + 20)
 
 
