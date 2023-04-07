@@ -16,10 +16,9 @@ call pi face-recognition
 call pi feedparser
 call pi flask
 call pi gensim
-call pi gensim==38
-call pi googletrans==310a0
+call pi googletrans
 call pi gtts
-call pi h5py==2100
+call pi h5py
 call pi html5lib
 call pi icrawler
 call pi icrawlerStep
@@ -29,7 +28,6 @@ call pi ipython
 call pi jupyter
 call pi keras
 call pi keras-unet
-call pi keras==231
 call pi lazypredict
 call pi lazypredit
 call pi lxml

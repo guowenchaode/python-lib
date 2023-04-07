@@ -20,7 +20,6 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 net = cv2.dnn.readNetFromCaffe(prototxt, model)
 vf = 0
 vs = VideoStream(vf).start()
-time.sleep(2.0)
 fps = FPS().start()
 while True:
     frame = vs.read()
