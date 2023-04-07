@@ -1,0 +1,48 @@
+import pyaudio
+import wave
+
+CHUNK = 1024  # 每个缓冲区的帧数
+FORMAT = pyaudio.paInt16  # 采样位数
+CHANNELS = 1  # 单声道
+RATE = 44100  # 采样频率
+
+
+
+chunk_size = 1024  # 512
+audio_format = pyaudio.paInt16
+channels = 1
+rate = 20000
+
+
+def record_audio(wave_out_path, RECORD_SECONDS):
+    print("ON")
+
+    p = pyaudio.PyAudio()  # 初始化
+
+    stream = p.open(format=FORMAT,
+                    channels=CHANNELS,
+                    rate=RATE,
+                    input=True,
+                    frames_per_buffer=CHUNK)  # 创建录音文件
+    frames = []
+
+    for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
+        data = stream.read(CHUNK)
+        frames.append(data)  # 开始录音
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+    print("OFF")
+
+    wf = wave.open(f'{wave_out_path}/1.wav', 'wb')  # 保存
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(p.get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(b''.join(frames))
+    wf.close()
+
+
+path = "D:\Git\github\python-lib\localtest"
+record_second = 5
+record_audio(path, record_second)
