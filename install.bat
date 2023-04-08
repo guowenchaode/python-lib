@@ -25,7 +25,7 @@ call pi icrawlerStep
 call pi image-classifiers
 call pi imageai
 call pi ipython
-call pi jupyter
+call pi jupyter3
 call pi keras
 call pi keras-unet
 call pi lazypredict
