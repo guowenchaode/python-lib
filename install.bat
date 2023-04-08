@@ -1,6 +1,7 @@
 call pi tensorflow
 call pi keras
 call pi BeautifulSoup4
+call pi CMake
 call pi ISR
 call pi PyAudio-0211-cp37-cp37m-win_amd64whl
 call pi SpeechRecognition
