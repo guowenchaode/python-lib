@@ -2,9 +2,14 @@ import re
 import json
 import requests
 import exifread
+import os.path
+import time
+from datetime import datetime
 
 
-# 转换经纬度格式
+ISOTIMEFORMAT = '%Y:%m:%d %X'
+
+
 def latitude_and_longitude_convert_to_decimal_system(*arg):
     """
     经纬度转为小数, param arg:
@@ -13,48 +18,59 @@ def latitude_and_longitude_convert_to_decimal_system(*arg):
     return float(arg[0]) + ((float(arg[1]) + (float(arg[2].split('/')[0]) / float(arg[2].split('/')[-1]) / 60)) / 60)
 
 
+def float_to_time(tm):
+    dt = time.strftime(ISOTIMEFORMAT, time.localtime(tm))
+    return dt
+
+
 # 读取照片的GPS经纬度信息
+
+
 def load_image(pic_path):
     GPS = {}
     date = ''
     with open(pic_path, 'rb') as f:
         tags = exifread.process_file(f)
         for tag, value in tags.items():
-            # 纬度
-            if re.match('GPS GPSLatitudeRef', tag):
-                GPS['GPSLatitudeRef'] = str(value)
-            # 经度
-            elif re.match('GPS GPSLongitudeRef', tag):
-                GPS['GPSLongitudeRef'] = str(value)
-            # 海拔
-            elif re.match('GPS GPSAltitudeRef', tag):
-                GPS['GPSAltitudeRef'] = str(value)
-            elif re.match('GPS GPSLatitude', tag):
-                try:
-                    match_result = re.match(
-                        '\[(\w*),(\w*),(\w.*)/(\w.*)\]', str(value)).groups()
-                    GPS['GPSLatitude'] = int(match_result[0]), int(
-                        match_result[1]), int(match_result[2])
-                except:
-                    deg, min, sec = [x.replace(' ', '')
-                                     for x in str(value)[1:-1].split(',')]
-                    GPS['GPSLatitude'] = latitude_and_longitude_convert_to_decimal_system(
-                        deg, min, sec)
-            elif re.match('GPS GPSLongitude', tag):
-                try:
-                    match_result = re.match(
-                        '\[(\w*),(\w*),(\w.*)/(\w.*)\]', str(value)).groups()
-                    GPS['GPSLongitude'] = int(match_result[0]), int(
-                        match_result[1]), int(match_result[2])
-                except:
-                    deg, min, sec = [x.replace(' ', '')
-                                     for x in str(value)[1:-1].split(',')]
-                    GPS['GPSLongitude'] = latitude_and_longitude_convert_to_decimal_system(
-                        deg, min, sec)
-            elif re.match('GPS GPSAltitude', tag):
-                GPS['GPSAltitude'] = str(value)
-            elif re.match('.*Date.*', tag):
+            # # 纬度
+            # if re.match('GPS GPSLatitudeRef', tag):
+            #     GPS['GPSLatitudeRef'] = str(value)
+            # # 经度
+            # elif re.match('GPS GPSLongitudeRef', tag):
+            #     GPS['GPSLongitudeRef'] = str(value)
+            # # 海拔
+            # elif re.match('GPS GPSAltitudeRef', tag):
+            #     GPS['GPSAltitudeRef'] = str(value)
+            # elif re.match('GPS GPSLatitude', tag):
+            #     try:
+            #         match_result = re.match(
+            #             '\[(\w*),(\w*),(\w.*)/(\w.*)\]', str(value)).groups()
+            #         GPS['GPSLatitude'] = int(match_result[0]), int(
+            #             match_result[1]), int(match_result[2])
+            #     except:
+            #         deg, min, sec = [x.replace(' ', '')
+            #                          for x in str(value)[1:-1].split(',')]
+            #         GPS['GPSLatitude'] = latitude_and_longitude_convert_to_decimal_system(
+            #             deg, min, sec)
+            # elif re.match('GPS GPSLongitude', tag):
+            #     try:
+            #         match_result = re.match(
+            #             '\[(\w*),(\w*),(\w.*)/(\w.*)\]', str(value)).groups()
+            #         GPS['GPSLongitude'] = int(match_result[0]), int(
+            #             match_result[1]), int(match_result[2])
+            #     except:
+            #         deg, min, sec = [x.replace(' ', '')
+            #                          for x in str(value)[1:-1].split(',')]
+            #         GPS['GPSLongitude'] = latitude_and_longitude_convert_to_decimal_system(
+            #             deg, min, sec)
+            # elif re.match('GPS GPSAltitude', tag):
+            #     GPS['GPSAltitude'] = str(value)
+            if re.match('.*Date.*', tag):
                 date = str(value)
+        if date == '':
+            lt = os.path.getmtime(pic_path)
+            date = float_to_time(lt)
+    print(f'Image Date:{date}')
     return {'gps_info': GPS, 'date_info': date}
 
 
