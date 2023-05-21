@@ -1,6 +1,11 @@
 from wxauto import *
 import datetime
 import time
+import sys 
+
+sys.path.append(r"D:\Git\github\python-lib\audio")
+
+from speaker import speak
 
 # 获取当前微信客户端
 wx = WeChat()
@@ -26,13 +31,15 @@ def get_default_window_messages(user, filter, tm=0):
     # 输出当前聊天窗口聊天消息
     msgs = wx.GetAllMessage
 
-    process_messages(msgs, user, filter)
-
+    last_msg = process_messages(msgs, user, filter)
 
     for i in range(tm):
         wx.LoadMoreMessage()
         msgs = wx.GetAllMessage
-        process_messages(msgs, user, filter)
+        last_msg = process_messages(msgs, user, filter)
+
+    speak(last_msg)
+    
 
 
 def process_messages(msgs, user, filter):
@@ -48,6 +55,8 @@ def process_messages(msgs, user, filter):
         elif user in sender and filter in content:
             print(f'{dt}:\t [{sender}] \n[{content}]')
             print('-'*200)
+            return content
+    return ''
 
 
 if __name__ == '__main__':
