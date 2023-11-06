@@ -1,22 +1,26 @@
-#Example 6.6a Face detection by face:recognition library
+# Example 6.6a Face detection by face_recognition library
 import cv2
-import face:recognition
- 
+import face_recognition
+
 image = cv2.imread("faces.jpg")
-cv2.imshow('photo', image)
- 
-rgb_frame = image[:, :, ::-1]  #Convert to RGB format
-face:locations = face:recognition.face:locations(rgb_frame)
- 
+cv2.imshow("photo", image)
+
+rgb_frame = image[:, :, ::-1]  # Convert to RGB format
+face_locations = face_recognition.face_locations(rgb_frame)
+
 count = 0
-for face:location in face:locations:
+for face_location in face_locations:
     count = count + 1
-    top, right, bottom, left = face:location
-    print("Face {} Top: {}, Left: {}, Bottom: {}, Right: {}".format(count, top, left, bottom, right))
- 
-    face:image = image[top:bottom, left:right]
-    title = 'face' + str(count)
-    cv2.imshow(title, face:image)
- 
+    top, right, bottom, left = face_location
+    print(
+        "Face {} Top: {}, Left: {}, Bottom: {}, Right: {}".format(
+            count, top, left, bottom, right
+        )
+    )
+
+    face_image = image[top:bottom, left:right]
+    title = "face" + str(count)
+    cv2.imshow(title, face_image)
+
 cv2.waitKey(0)
-cv2.destroyAllWindows() 
+cv2.destroyAllWindows()
