@@ -18,7 +18,7 @@ CLASSES = ["background", "aeroplane", "bicycle", "bird", "boat",
            "sofa", "train", "tvmonitor"]
 COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 net = cv2.dnn.readNetFromCaffe(prototxt, model)
-vf = 0
+vf = 1
 vs = VideoStream(vf).start()
 fps = FPS().start()
 while True:
@@ -42,7 +42,7 @@ while True:
             y = startY - 15 if startY - 15 > 15 else startY + 15
             cv2.putText(frame, label, (startX, y),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLORS[idx], 2)
-            cv2.imshow("Frame", frame)
+    cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
     # if the `q` key was pressed, break from the loop
     if key == ord("q"):
