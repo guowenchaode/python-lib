@@ -6,7 +6,7 @@ import sys
 
 sys.path.append(r"D:/Git/github/python-lib")
 
-from py_lib.func import log, write_file, dt
+from py_lib.func import log, write_file, dt, set_copied
 
 ########################################
 
@@ -41,17 +41,28 @@ INPUT YOUR SCRIPT HERE
 """
 import cv2
 
-LOG_PATH = r"D:/__cache/qr_code/qr-code/input.log"
+LOG_PATH = r"D:/__cache/qr_code/input.log"
+
+last_data = ""
 
 
 def process_qr(cam_frame):
+    global last_data
     # detect and decode
     detector = cv2.QRCodeDetector()
     data, bbox, straight_qrcode = detector.detectAndDecode(cam_frame)
     # if there is a QR code
-    if bbox is not None and data != "":
+
+    if bbox is None or data == "":
+        return
+
+    set_copied(data)
+    if data == last_data:
+        print(f"QRCode data: same data")
+    else:
         date_time = dt()
         log = f"{date_time}:\t[{data}]\n"
+        last_data = data
         print(f"QRCode data:\n{data}")
         write_file(LOG_PATH, log)
 

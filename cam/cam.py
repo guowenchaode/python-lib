@@ -10,7 +10,7 @@ import imutils
 import time
 import cv2
 from cam_qr import process_qr
-
+import traceback
 
 prototxt = r"D:\Git\github\python-lib\MobileNetSSD_deploy.prototxt"
 model = r"D:\Git\github\python-lib\MobileNetSSD_deploy.caffemodel"
@@ -43,8 +43,12 @@ net = cv2.dnn.readNetFromCaffe(prototxt, model)
 
 
 def process(frame):
-    process_object(frame)
-    process_qr(frame)
+    try:
+        process_object(frame)
+        process_qr(frame)
+    except Exception as e:
+        traceback.print_exc()
+        raise e
 
 
 def process_object(frame):
@@ -98,8 +102,8 @@ def open():
             fps = FPS().start()
             if not open_cam(fps, vs):
                 break
-        except:
-            pass
+        except Exception as e:
+            traceback.print_exc()
 
 
 if __name__ == "__main__":
