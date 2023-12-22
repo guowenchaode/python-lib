@@ -9,6 +9,8 @@ import argparse
 import imutils
 import time
 import cv2
+from cam_qr import process_qr
+
 
 prototxt = r"D:\Git\github\python-lib\MobileNetSSD_deploy.prototxt"
 model = r"D:\Git\github\python-lib\MobileNetSSD_deploy.caffemodel"
@@ -41,6 +43,11 @@ net = cv2.dnn.readNetFromCaffe(prototxt, model)
 
 
 def process(frame):
+    process_object(frame)
+    process_qr(frame)
+
+
+def process_object(frame):
     frame = imutils.resize(frame, width=400)
     (h, w) = frame.shape[:2]
     blob = cv2.dnn.blobFromImage(

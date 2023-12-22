@@ -2,6 +2,8 @@ import os
 import shutil
 import datetime
 import requests
+import win32clipboard
+import traceback
 
 KB = 1024
 MB = KB * 1024
@@ -117,3 +119,42 @@ def http_post(url, data={}):
     response = session.post(url, json=data, verify=False)
     # log(f"[http_post] code=[{response.status_code}]")
     return response
+
+
+def set_copied(text):
+    # # set clipboard data
+    win32clipboard.OpenClipboard()
+    win32clipboard.EmptyClipboard()
+    win32clipboard.SetClipboardText(text)
+    win32clipboard.CloseClipboard()
+
+
+def get_copied():
+    # get clipboard data
+    win32clipboard.OpenClipboard()
+    data = win32clipboard.GetClipboardData()
+    win32clipboard.CloseClipboard()
+    return data
+
+
+def dt():
+    d = datetime.datetime.now()
+    dt_str = d.strftime("%Y-%m-%d-%H.%M.%S")
+    return dt_str
+
+
+def read_file(path):
+    try:
+        return open(path, "r").read()
+    except:
+        return ""
+
+
+def write_file(path, content, append=True):
+    try:
+        flg = "a" if append else "w"
+        with open(path, flg, encoding="utf-8") as text_file:
+            text_file.write(content)
+    except Exception as e:
+        traceback.print_exc()
+        raise e
