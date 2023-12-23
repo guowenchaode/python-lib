@@ -25,6 +25,7 @@ import argparse
 import os
 import time
 import traceback
+import re
 from datetime import datetime
 
 ############### SAMPLE ################
@@ -122,34 +123,80 @@ def parse_date(reg):
 dict_list = "D:\__Alex\config\main\db\plan.csv"
 
 
+def noti_current_plan(plan_list):
+    if len(plan_list) == 0:
+        return
+
+    plan_detail = [plan.get("detail/String") for plan in plan_list]
+    log(f"[当前计划]:{plan_detail}")
+    # [h, m, s, *ms] = re.split("[.:]", delta_time)
+    msg = f"请注意,现在{plan_detail}"
+    speak(msg)
+
+
+wait_time = 10
+
+
+def get_delta(plan_date, now):
+    if plan_date is None:
+        return None
+    delta = plan_date - now
+    return delta
+
+
+def is_current_plan(is_active, delta):
+    if is_active != "Y":
+        return False
+
+    if delta is None:
+        return False
+
+    left_seconds = delta.total_seconds()
+
+    if left_seconds < 0:
+        return False
+
+    if left_seconds <= wait_time:
+        return True
+
+    return False
+
+
 def start_plan():
     plan_list = to_dict_list(dict_list)
     date_reg_list = [plan.get("dateExp/String") for plan in plan_list]
     date_time_list = parse_date_list(" ".join(date_reg_list))
 
     now = datetime.now()
-    idx = 0
+
+    matched_plan_list = []
     for i in range(len(plan_list)):
         try:
             plan = plan_list[i]
             plan_detail = plan.get("detail/String")
+            is_active = plan.get("active/String") == "Y"
+
             date_time = date_time_list[i]
-            log(f"[{i}]:[{date_time}] {plan_detail}")
+            delta = get_delta(date_time, now)
 
-            if date_time is None:
-                continue
+            is_current = is_current_plan(plan, delta)
 
-            speak(plan_detail)
+            msg = f"[{i}]:[{is_active}][{date_time}]=>[{delta}] ==> {plan_detail}"
 
-            delta = date_time - now
-            left_seconds = delta.total_seconds()
-            log(f"==>[{delta}] {plan_detail}")
-
-            if left_seconds > 0 and left_seconds < 6000:
-                log_error(f"==>[{delta}] {plan_detail}")
-                speak(plan_detail)
+            if is_current:
+                log_error(msg)
+                matched_plan_list.append(plan)
+            else:
+                log(msg)
         except:
             pass
+
+    noti_current_plan(matched_plan_list)
+
+
+def start_plan_and_wait():
+    start_plan()
+    sleep(wait_time)
 
 
 ########################################
