@@ -10,6 +10,7 @@ from py_lib.func import (
     log,
     log_error,
     sleep,
+    dt,
     read_file,
     write_file,
     format_json,
@@ -79,13 +80,14 @@ from datetime import datetime
 from time import mktime
 import _thread as thread
 import os
-
+import pyaudio
+import wave
 
 STATUS_FIRST_FRAME = 0  # 第一帧的标识
 STATUS_CONTINUE_FRAME = 1  # 中间帧标识
 STATUS_LAST_FRAME = 2  # 最后一帧的标识
 
-pcm_file = r"W:\Downloads\test.pcm"
+pcm_dir = r"W:\Downloads"
 
 
 class Ws_Param(object):
@@ -150,7 +152,7 @@ class Ws_Param(object):
 
 
 class tts_speaker:
-    def __init__(self, text):
+    def __init__(self, text, pac_name="text"):
         self.wsParam = Ws_Param(
             APPID="5c38b07d",
             APISecret="6538336f03a7b4f896dad4af884f98f7",
@@ -158,6 +160,8 @@ class tts_speaker:
             Text=text,
         )
         websocket.enableTrace(False)
+        dts = dt()
+        self.pcm_file = f"{pcm_dir}/{pac_name}.{dts}.pcm"
 
     def on_message(self, ws, message):
         try:
@@ -171,10 +175,11 @@ class tts_speaker:
                 errMsg = message["message"]
                 print("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
             else:
-                with open(pcm_file, "ab") as f:
+                with open(self.pcm_file, "ab") as f:
                     f.write(audio)
 
             if status == 2:
+                play_pcm(self.pcm_file)
                 print("ws is closed")
                 ws.close()
         except Exception as e:
@@ -199,8 +204,8 @@ class tts_speaker:
             d = json.dumps(d)
             print("------>开始发送文本数据")
             ws.send(d)
-            if os.path.exists(pcm_file):
-                os.remove(pcm_file)
+            if os.path.exists(self.pcm_file):
+                os.remove(self.pcm_file)
 
         thread.start_new_thread(run, ())
 
@@ -217,10 +222,56 @@ class tts_speaker:
         ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
 
 
-def speak(text):
-    tts = tts_speaker(text)
+def speak(text, pac_name="test"):
+    tts = tts_speaker(text, pac_name)
     tts.speak()
 
+
+def pcm2wav(pcm_file, wav_file="", channels=1, bits=16, sample_rate=16000):
+    if wav_file == "":
+        wav_file = f"{pcm_file}.wav"
+
+    # 打开 PCM 文件
+    pcmf = open(pcm_file, "rb")
+    pcmdata = pcmf.read()
+    pcmf.close()
+
+    # 打开将要写入的 WAVE 文件
+    wavfile = wave.open(wav_file, "wb")
+    # 设置声道数
+    wavfile.setnchannels(channels)
+    # 设置采样位宽
+    wavfile.setsampwidth(bits // 8)
+    # 设置采样率
+    wavfile.setframerate(sample_rate)
+    # 写入 data 部分
+    wavfile.writeframes(pcmdata)
+    wavfile.close()
+
+
+def play_wav(wav_path):
+    # 初始化播放器
+    p = pyaudio.PyAudio()
+    stream = p.open(
+        format=p.get_format_from_width(2), channels=1, rate=16000, output=True
+    )
+
+    # 将 pcm 数据直接写入 PyAudio 的数据流
+    with open(wav_path, "rb") as f:
+        stream.write(f.read())
+
+    stream.stop_stream()
+    stream.close()
+    p.terminate()
+
+
+def play_pcm(pcm_path):
+    wav_path = f"{pcm_path}.wav"
+    pcm2wav(pcm_path, wav_path)
+    play_wav(wav_path)
+
+
+# pcm2wave("f1.pcm", "f2.wav")
 
 ########################################
 ########################################
