@@ -6,6 +6,8 @@ import win32clipboard
 import traceback
 import json
 import time
+import subprocess
+import pandas as pd
 
 KB = 1024
 MB = KB * 1024
@@ -341,3 +343,23 @@ def clear_lines(content, frm="  ", to=" "):
     while frm in content:
         content = content.replace(frm, to)
     return content
+
+
+def execute(cmds):
+    result = subprocess.run(cmds, capture_output=True)
+    output = result.stdout.decode("utf-8")
+    error = result.stderr.decode("utf-8")
+    return f"{output}".strip(), f"{error}".strip()
+
+
+def to_dict_list(pth):
+    try:
+        df = pd.read_csv(pth)
+        json_data = df.to_json(orient="records")
+        return json.loads(json_data)
+    except:
+        return None
+
+
+def to_date_time(date_str, reg="%Y/%m/%d %H:%M:%S"):
+    return datetime.datetime.strptime(date_str, reg)

@@ -4,7 +4,7 @@
 ############## TOP IMPORT FUNC #########
 import sys
 
-sys.path.append(r"C:/Users/e531866/Desktop/_GUOZHENG/git/repository/python-lib/")
+sys.path.append(r"D:/Git/github/python-lib")
 
 from py_lib.func import (
     log,
@@ -14,6 +14,7 @@ from py_lib.func import (
     write_file,
     format_json,
     loop_dir,
+    execute,
 )
 
 ########################################
@@ -98,6 +99,15 @@ class plan_parser:
         next_date = self.parse_next_date(reg_list, date_list)
 
 
+def parse_date(reg):
+    command = f"java utils.function.DateParser {reg}"
+    rs, e = execute(command)
+    dt = datetime.strptime(rs, "%Y/%m/%d %H:%M:%S")
+    return dt
+    # print(f"rs={rs}")
+    # print(f"e={e}")
+
+
 ########################################
 ########################################
 
@@ -112,8 +122,11 @@ if __name__ == "__main__":
         ###########################################
         if args.action == "test":
             test(args.text)
+        elif args.action == "parse_date":
+            parse_date(args.date_reg)
         else:
-            test(args.text)
+            date_reg = "*/*/*/[1-5]/[9-18]:0:0"
+            parse_date(date_reg)
         ###########################################
         end = datetime.now()
         inter = end - start
