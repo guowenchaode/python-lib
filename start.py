@@ -86,7 +86,7 @@ def run():
         traceback.print_exc()
 
 
-def start_threads(enable_cam, enable_plan):
+def start_threads(enable_cam=True, enable_plan=True):
     if enable_cam:
         thread = Thread(target=start_cam)
         thread.start()
