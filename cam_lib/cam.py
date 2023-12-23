@@ -94,7 +94,7 @@ def open_cam(fps, vs):
     return success
 
 
-def open():
+def start_cam():
     while True:
         try:
             vf = 1

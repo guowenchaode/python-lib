@@ -33,6 +33,9 @@ def build_arg_parser():
     parser = argparse.ArgumentParser(description="Action")
     parser.add_argument("--action", dest="action", required=False, help="action")
     parser.add_argument("--text", dest="text", required=False, help="text")
+    parser.add_argument(
+        "--enable_plan", dest="enable_plan", required=False, help="enable_plan"
+    )
     args, left = parser.parse_known_args()
     return args
 
@@ -52,7 +55,7 @@ INPUT YOUR SCRIPT HERE
 import time
 
 # from windows.task_list import save_active_title
-from cam_lib.cam import open
+from cam_lib.cam import start_cam
 from threading import Thread
 
 # from windows.pc_monitor import monite
@@ -83,9 +86,10 @@ def run():
         traceback.print_exc()
 
 
-def start_threads():
-    thread = Thread(target=open)
-    thread.start()
+def start_threads(enable_cam, enable_plan):
+    if enable_cam:
+        thread = Thread(target=start_cam)
+        thread.start()
 
     # thread = Thread(target=start_server)
     # thread.start()
@@ -94,9 +98,9 @@ def start_threads():
     # thread.start()
 
 
-def main(slp=3):
+def main(enable_plan=True, slp=3):
     # START THREAD
-    start_threads()
+    start_threads(enable_plan)
     while True:
         try:
             log(f"Start Main Thread")
@@ -121,6 +125,8 @@ if __name__ == "__main__":
         ###########################################
         if args.action == "test":
             test(args.text)
+        elif args.action == "start":
+            main(args.enable_plan)
         else:
             # test(args.text)
             main()
