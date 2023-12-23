@@ -13,6 +13,9 @@ from py_lib.func import (
     read_file,
     write_file,
     format_json,
+    OKCYAN,
+    FAIL,
+    OKGREEN,
     loop_dir,
     to_date_time,
     to_dict_list,
@@ -63,7 +66,7 @@ class plan_parser:
     # 12 ~ [1-10, 12] True
     # 12 ~ [1-10] True
     # 12 ~ * True
-    def match_reg_arr(self, value, reg):
+    def match_exp_arr(self, value, reg):
         # 12 ~ [1-10, 12] True
         reg = reg.replace("[", "").replace("]", "")
         num_arr = reg.split(",")
@@ -79,7 +82,7 @@ class plan_parser:
         if value == reg or reg == "*":
             log(f"{value} ~= {reg}")
             return True
-        elif self.match_reg_arr(value, reg):
+        elif self.match_exp_arr(value, reg):
             return True
         return False
 
@@ -97,8 +100,8 @@ class plan_parser:
         log("success")
         return ""
 
-    def parse(self, date_reg, date_str):
-        reg_list = parse_element(date_reg)
+    def parse(self, date_exp, date_str):
+        reg_list = parse_element(date_exp)
         date_list = parse_element(date_str)
         next_date = self.parse_next_date(reg_list, date_list)
 
@@ -164,8 +167,8 @@ def is_current_plan(is_active, delta):
 
 def start_plan():
     plan_list = to_dict_list(dict_list)
-    date_reg_list = [plan.get("dateExp/String") for plan in plan_list]
-    date_time_list = parse_date_list(" ".join(date_reg_list))
+    date_exp_list = [plan.get("dateExp/String") for plan in plan_list]
+    date_time_list = parse_date_list(" ".join(date_exp_list))
 
     now = datetime.now()
 
@@ -173,23 +176,50 @@ def start_plan():
     for i in range(len(plan_list)):
         try:
             plan = plan_list[i]
-            plan_detail = plan.get("detail/String")
-            is_active = plan.get("active/String") == "Y"
-
             date_time = date_time_list[i]
-            delta = get_delta(date_time, now)
-
-            is_current = is_current_plan(plan, delta)
-
-            msg = f"[{i}]:[{is_active}][{date_time}]=>[{delta}] ==> {plan_detail}"
-
-            if is_current:
-                log_error(msg)
-                matched_plan_list.append(plan)
-            else:
-                log(msg)
+            plan["date"] = date_time
         except:
             pass
+
+    def sort_plan(plan):
+        date = plan.get("date")
+        if date is None:
+            return -1
+        return date.timestamp()
+
+    sorted_list = sorted(plan_list, key=sort_plan)
+
+    i = 1
+    for plan in sorted_list:
+        try:
+            plan_exp = plan.get("dateExp/String")
+            plan_detail = plan.get("detail/String")
+            is_active = plan.get("active/String") != "N"
+            date_time = plan.get("date")
+            delta = get_delta(date_time, now)
+            is_active = plan.get("active/String") != "N"
+            msg = f"[{i}]:[{is_active}] => [{plan_exp}] => [{date_time}] => [{delta}] => {plan_detail}"
+            is_current = is_current_plan(plan, delta)
+            if is_active:
+                left_seconds = delta.total_seconds()
+                in_hour = left_seconds < 60 * 60
+                in_today = left_seconds < 60 * 60 * 24
+                if in_hour:
+                    log(msg, FAIL)
+                elif in_today:
+                    log(msg, OKGREEN)
+                else:
+                    log_error(msg)
+            else:
+                log(msg)
+
+            if is_current:
+                log_error(f"[current-plan]{plan_detail}")
+                matched_plan_list.append(plan)
+        except:
+            pass
+        finally:
+            i += 1
 
     noti_current_plan(matched_plan_list)
 
@@ -214,9 +244,9 @@ if __name__ == "__main__":
         if args.action == "test":
             test(args.text)
         elif args.action == "parse_date":
-            parse_date(args.date_reg)
+            parse_date(args.date_exp)
         else:
-            date_reg = "*/*/*/[1-5]/[9-18]:0:0"
+            date_exp = "*/*/*/[1-5]/[9-18]:0:0"
             start_plan()
         ###########################################
         end = datetime.now()
