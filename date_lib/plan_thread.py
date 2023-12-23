@@ -8,6 +8,7 @@ sys.path.append(r"D:/Git/github/python-lib")
 
 from py_lib.func import (
     log,
+    dt,
     log_error,
     sleep,
     read_file,
@@ -55,12 +56,18 @@ dict_list = "D:\__Alex\config\main\db\plan.csv"
 def start_plan():
     plan_list = to_dict_list(dict_list)
 
+    now = datetime.now()
     idx = 0
     for plan in plan_list:
-        idx += 1
-        date_reg = plan.get("dateExp/String")
-        date_time = parse_date(date_reg)
-        print(f"[{idx}]:{date_time}")
+        try:
+            idx += 1
+            date_reg = plan.get("dateExp/String")
+            date_time = parse_date(date_reg)
+
+            delta = date_time - now
+            print(f"[{idx}]:{date_time} {delta}")
+        except:
+            pass
 
 
 ########################################

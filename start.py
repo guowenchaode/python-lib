@@ -62,6 +62,7 @@ from threading import Thread
 # from windows.task_window import save_window_workspace
 # from work_note_lib.work_note import save_work_note
 from chrome_lib.chrome import get_last_history
+from date_lib.date_parser import start_plan
 
 # from localtest_http_server_run import start_self_service
 
@@ -91,6 +92,10 @@ def start_threads(enable_cam=True, enable_plan=True):
         thread = Thread(target=start_cam)
         thread.start()
 
+    if enable_plan:
+        thread = Thread(target=start_plan)
+        thread.start()
+
     # thread = Thread(target=start_server)
     # thread.start()
 
@@ -98,9 +103,9 @@ def start_threads(enable_cam=True, enable_plan=True):
     # thread.start()
 
 
-def main(enable_plan=True, slp=3):
+def main(enable_cam=False, enable_plan=True, slp=3):
     # START THREAD
-    start_threads(enable_plan)
+    start_threads(enable_cam, enable_plan)
     while True:
         try:
             log(f"Start Main Thread")

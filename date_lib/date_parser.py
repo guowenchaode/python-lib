@@ -14,6 +14,7 @@ from py_lib.func import (
     write_file,
     format_json,
     loop_dir,
+    to_dict_list,
     execute,
 )
 
@@ -106,6 +107,26 @@ def parse_date(reg):
     return dt
     # print(f"rs={rs}")
     # print(f"e={e}")
+
+
+dict_list = "D:\__Alex\config\main\db\plan.csv"
+
+
+def start_plan():
+    plan_list = to_dict_list(dict_list)
+
+    now = datetime.now()
+    idx = 0
+    for plan in plan_list:
+        try:
+            idx += 1
+            date_reg = plan.get("dateExp/String")
+            date_time = parse_date(date_reg)
+
+            delta = now - date_time
+            print(f"[{idx}]:{date_time} {delta}")
+        except:
+            pass
 
 
 ########################################
