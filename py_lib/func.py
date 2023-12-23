@@ -362,4 +362,7 @@ def to_dict_list(pth):
 
 
 def to_date_time(date_str, reg="%Y/%m/%d %H:%M:%S"):
-    return datetime.datetime.strptime(date_str, reg)
+    try:
+        return datetime.datetime.strptime(date_str, reg)
+    except:
+        return None

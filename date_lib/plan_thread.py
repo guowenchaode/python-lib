@@ -58,14 +58,16 @@ def start_plan():
 
     now = datetime.now()
     idx = 0
-    for plan in plan_list:
+    date_reg_list = [plan.get("dateExp/String") for plan in plan_list]
+
+    date_time_list = parse_date(date_reg_list)
+
+    for date_reg in date_reg_list:
         try:
             idx += 1
-            date_reg = plan.get("dateExp/String")
-            date_time = parse_date(date_reg)
 
             delta = date_time - now
-            print(f"[{idx}]:{date_time} {delta}")
+            print(f"[{idx}]:{date_time} => {delta}")
         except:
             pass
 

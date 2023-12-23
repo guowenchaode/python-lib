@@ -14,6 +14,7 @@ from py_lib.func import (
     write_file,
     format_json,
     loop_dir,
+    to_date_time,
     to_dict_list,
     execute,
 )
@@ -49,6 +50,7 @@ def test(txt):
 """
 INPUT YOUR SCRIPT HERE
 """
+from xunfei_lib.tts import speak
 
 
 class plan_parser:
@@ -100,6 +102,14 @@ class plan_parser:
         next_date = self.parse_next_date(reg_list, date_list)
 
 
+def parse_date_list(reg_list):
+    command = f"java utils.function.DateParser {reg_list}"
+    rs, e = execute(command)
+    reg_list = rs.split("==")
+    dt_list = [to_date_time(reg) for reg in reg_list]
+    return dt_list
+
+
 def parse_date(reg):
     command = f"java utils.function.DateParser {reg}"
     rs, e = execute(command)
@@ -114,17 +124,30 @@ dict_list = "D:\__Alex\config\main\db\plan.csv"
 
 def start_plan():
     plan_list = to_dict_list(dict_list)
+    date_reg_list = [plan.get("dateExp/String") for plan in plan_list]
+    date_time_list = parse_date_list(" ".join(date_reg_list))
 
     now = datetime.now()
     idx = 0
-    for plan in plan_list:
+    for i in range(len(plan_list)):
         try:
-            idx += 1
-            date_reg = plan.get("dateExp/String")
-            date_time = parse_date(date_reg)
+            plan = plan_list[i]
+            plan_detail = plan.get("detail/String")
+            date_time = date_time_list[i]
+            log(f"[{i}]:[{date_time}] {plan_detail}")
 
-            delta = now - date_time
-            print(f"[{idx}]:{date_time} {delta}")
+            if date_time is None:
+                continue
+
+            speak(plan_detail)
+
+            delta = date_time - now
+            left_seconds = delta.total_seconds()
+            log(f"==>[{delta}] {plan_detail}")
+
+            if left_seconds > 0 and left_seconds < 6000:
+                log_error(f"==>[{delta}] {plan_detail}")
+                speak(plan_detail)
         except:
             pass
 
@@ -147,7 +170,7 @@ if __name__ == "__main__":
             parse_date(args.date_reg)
         else:
             date_reg = "*/*/*/[1-5]/[9-18]:0:0"
-            parse_date(date_reg)
+            start_plan()
         ###########################################
         end = datetime.now()
         inter = end - start
