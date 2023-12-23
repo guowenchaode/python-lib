@@ -9,7 +9,7 @@ import argparse
 import imutils
 import time
 import cv2
-from cam_qr import process_qr
+from cam_lib.cam_qr import process_qr
 import traceback
 
 prototxt = r"D:\Git\github\python-lib\MobileNetSSD_deploy.prototxt"
@@ -52,7 +52,7 @@ def process(frame):
 
 
 def process_object(frame):
-    frame = imutils.resize(frame, width=400)
+    frame = imutils.resize(frame, width=800)
     (h, w) = frame.shape[:2]
     blob = cv2.dnn.blobFromImage(
         cv2.resize(frame, (300, 300)), 0.007843, (300, 300), 127.5
