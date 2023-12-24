@@ -160,15 +160,7 @@ def get_delta(plan_date, now):
     return delta
 
 
-def is_current_plan(is_active, delta):
-    if not is_active:
-        return False
-
-    if delta is None:
-        return False
-
-    left_seconds = int(delta.total_seconds())
-
+def is_current_plan(left_seconds):
     if left_seconds < 0:
         return False
 
@@ -216,12 +208,11 @@ def start_plan():
     log(log_head * 3)
     log(log_head * 3)
     for plan in sorted_list:
+        date_time = plan.get("date")
+        is_active = plan.get("active/String") != "N"
+        plan_exp = plan.get("dateExp/String")
+        plan_detail = plan.get("detail/String")
         try:
-            plan_exp = plan.get("dateExp/String")
-            plan_detail = plan.get("detail/String")
-            date_time = plan.get("date")
-            is_active = plan.get("active/String") != "N"
-
             if date_time is None or not is_active:
                 continue
 
@@ -231,28 +222,29 @@ def start_plan():
             if left_seconds < 0:
                 continue
 
+            is_current = is_current_plan(left_seconds)
             msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{left_seconds}] => [{plan_exp}] =>  {plan_detail}"
-            is_current = is_current_plan(is_active, delta)
-            if is_active:
-                in_hour = left_seconds > 0 and left_seconds < 60 * 60
-                in_today = left_seconds > 0 and left_seconds < 60 * 60 * 24
-                if in_hour:
-                    log(msg, FAIL)
-                elif in_today:
-                    log(msg, OKGREEN)
-                else:
-                    log_error(msg)
-                i += 1
-            # else:
-            # log(msg)
+            log_plan(msg, left_seconds)
+            i += 1
 
             if is_current:
                 log_error(f"[current-plan]{plan_detail}")
                 matched_plan_list.append(plan)
-        except:
-            pass
+        except Exception as e:
+            log_error(f"[{plan_detail}]: {e}")
 
     noti_current_plan(matched_plan_list)
+
+
+def log_plan(msg, left_seconds):
+    in_hour = left_seconds > 0 and left_seconds < 60 * 60
+    in_today = left_seconds > 0 and left_seconds < 60 * 60 * 24
+    if in_hour:
+        log(msg, FAIL)
+    elif in_today:
+        log(msg, OKGREEN)
+    else:
+        log_error(msg)
 
 
 def start_plan_and_wait():
