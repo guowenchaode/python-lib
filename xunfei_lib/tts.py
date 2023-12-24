@@ -4,7 +4,7 @@
 ############## TOP IMPORT FUNC #########
 import sys
 
-sys.path.append(r"D:/Git/github/python-lib")
+sys.path.append(r"D:\__cache\plan")
 
 from py_lib.func import (
     log,

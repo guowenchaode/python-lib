@@ -13,6 +13,7 @@ from py_lib.func import (
     read_file,
     write_file,
     format_json,
+    log_head,
     OKCYAN,
     FAIL,
     OKGREEN,
@@ -126,12 +127,24 @@ def parse_date(reg):
 dict_list = "D:\__Alex\config\main\db\plan.csv"
 
 
-def noti_current_plan(plan_list):
-    if len(plan_list) == 0:
-        return
+def is_late_hour():
+    now = datetime.now()
+    is_late = now.hour >= 0 and now.hour <= 6
+    return is_late
 
+
+def noti_current_plan(plan_list):
     plan_detail = [plan.get("detail/String") for plan in plan_list]
     log(f"[当前计划]:{plan_detail}")
+
+    if len(plan_list) == 0:
+        log_error("plan is empty")
+        return
+
+    if is_late_hour():
+        log_error("is late hour")
+        return
+
     # [h, m, s, *ms] = re.split("[.:]", delta_time)
     msg = f"请注意,现在{plan_detail}"
     speak(msg)
@@ -148,7 +161,7 @@ def get_delta(plan_date, now):
 
 
 def is_current_plan(is_active, delta):
-    if is_active != "Y":
+    if not is_active:
         return False
 
     if delta is None:
@@ -178,6 +191,16 @@ def start_plan():
             plan = plan_list[i]
             date_time = date_time_list[i]
             plan["date"] = date_time
+            is_active = plan.get("active/String") != "N"
+            plan_exp = plan.get("dateExp/String")
+            plan_detail = plan.get("detail/String")
+            delta = get_delta(date_time, now)
+            msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{plan_exp}] =>  {plan_detail}"
+
+            if is_active:
+                log_error(msg)
+            else:
+                log(msg)
         except:
             pass
 
@@ -190,43 +213,56 @@ def start_plan():
     sorted_list = sorted(plan_list, key=sort_plan)
 
     i = 1
+    log(log_head * 3)
+    log(log_head * 3)
     for plan in sorted_list:
         try:
             plan_exp = plan.get("dateExp/String")
             plan_detail = plan.get("detail/String")
-            is_active = plan.get("active/String") != "N"
             date_time = plan.get("date")
-            delta = get_delta(date_time, now)
             is_active = plan.get("active/String") != "N"
-            msg = f"[{i}]:[{is_active}] => [{plan_exp}] => [{date_time}] => [{delta}] => {plan_detail}"
-            is_current = is_current_plan(plan, delta)
+
+            if date_time is None or not is_active:
+                continue
+
+            delta = get_delta(date_time, now)
+            left_seconds = int(delta.total_seconds())
+
+            if left_seconds < 0:
+                continue
+
+            msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{left_seconds}] => [{plan_exp}] =>  {plan_detail}"
+            is_current = is_current_plan(is_active, delta)
             if is_active:
-                left_seconds = delta.total_seconds()
-                in_hour = left_seconds < 60 * 60
-                in_today = left_seconds < 60 * 60 * 24
+                in_hour = left_seconds > 0 and left_seconds < 60 * 60
+                in_today = left_seconds > 0 and left_seconds < 60 * 60 * 24
                 if in_hour:
                     log(msg, FAIL)
                 elif in_today:
                     log(msg, OKGREEN)
                 else:
                     log_error(msg)
-            else:
-                log(msg)
+                i += 1
+            # else:
+            # log(msg)
 
             if is_current:
                 log_error(f"[current-plan]{plan_detail}")
                 matched_plan_list.append(plan)
         except:
             pass
-        finally:
-            i += 1
 
     noti_current_plan(matched_plan_list)
 
 
 def start_plan_and_wait():
-    start_plan()
-    sleep(wait_time)
+    while True:
+        try:
+            start_plan()
+        except:
+            pass
+        finally:
+            sleep(wait_time)
 
 
 ########################################

@@ -8,6 +8,8 @@ import json
 import time
 import subprocess
 import pandas as pd
+import sys
+import logging
 
 KB = 1024
 MB = KB * 1024
@@ -39,6 +41,23 @@ sep = "-" * 50
 
 
 log_head = "*********************"
+
+sys.stdout.reconfigure(encoding="utf-8")
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename="log.log",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+# 记录日志信息
+# logger.debug('debug message')
+# logger.info('info message')
+# logger.warning('warning message')
+# logger.error('error message')
+# logger.critical('critical message')
 
 
 def copy(from_path, to_path):
@@ -235,7 +254,9 @@ def log(l=log_head, color=ENDC, show_time=True):
     # info = '\t'.join(l)
     l = str(l)
     message = f"{dt}{color}  \t  {l}{ENDC}" if show_time else f"{color}{l}{ENDC}"
-    print(message)
+    # logger.info(l)
+    logger.info(message)
+    # print(message)
 
 
 def log_block(message, title=""):
