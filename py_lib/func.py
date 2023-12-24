@@ -44,10 +44,12 @@ log_head = "*********************"
 
 sys.stdout.reconfigure(encoding="utf-8")
 
+current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 logging.basicConfig(
     level=logging.INFO,
-    filename="log.log",
+    filename=f"D:\__cache\logs\{current_date}.log",
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filemode="a",
 )
 logger = logging.getLogger(__name__)
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -219,6 +221,12 @@ def get_copied():
     data = win32clipboard.GetClipboardData()
     win32clipboard.CloseClipboard()
     return data
+
+
+def d():
+    d = datetime.datetime.now()
+    dt_str = d.strftime("%Y-%m-%d")
+    return dt_str
 
 
 def dt():

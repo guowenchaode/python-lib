@@ -167,7 +167,7 @@ def is_current_plan(is_active, delta):
     if delta is None:
         return False
 
-    left_seconds = delta.total_seconds()
+    left_seconds = int(delta.total_seconds())
 
     if left_seconds < 0:
         return False
