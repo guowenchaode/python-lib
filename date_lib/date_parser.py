@@ -133,6 +133,23 @@ def is_late_hour():
     return is_late
 
 
+def noti_next_plan(plan_list):
+    plan_detail = [plan.get("detail/String") for plan in plan_list]
+    log(f"[下一计划]:{plan_detail}")
+
+    if len(plan_list) == 0:
+        log_error("plan is empty")
+        return
+
+    if is_late_hour():
+        log_error("is late hour")
+        return
+
+    # [h, m, s, *ms] = re.split("[.:]", delta_time)
+    msg = f"请注意,即将{plan_detail}"
+    speak(msg)
+
+
 def noti_current_plan(plan_list):
     plan_detail = [plan.get("detail/String") for plan in plan_list]
     log(f"[当前计划]:{plan_detail}")
@@ -146,7 +163,7 @@ def noti_current_plan(plan_list):
         return
 
     # [h, m, s, *ms] = re.split("[.:]", delta_time)
-    msg = f"请注意,现在{plan_detail}"
+    msg = f"请注意请注意,现在{plan_detail},{plan_detail}"
     speak(msg)
 
 
@@ -248,7 +265,8 @@ def start_plan():
         log_plan(next_message, next_left_seconds)
         log(log_head * 3)
 
-    noti_current_plan(matched_plan_list)
+    if len(matched_plan_list) > 0:
+        noti_current_plan(matched_plan_list)
 
 
 def log_plan(msg, left_seconds):
