@@ -207,6 +207,10 @@ def start_plan():
     i = 1
     log(log_head * 3)
     log(log_head * 3)
+
+    next_plan = None
+    next_message = ""
+    next_left_seconds = 0
     for plan in sorted_list:
         date_time = plan.get("date")
         is_active = plan.get("active/String") != "N"
@@ -224,6 +228,12 @@ def start_plan():
 
             is_current = is_current_plan(left_seconds)
             msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{left_seconds}] => [{plan_exp}] =>  {plan_detail}"
+
+            if left_seconds > 0 and next_plan is None:
+                next_plan = plan
+                next_message = msg
+                next_left_seconds = left_seconds
+
             log_plan(msg, left_seconds)
             i += 1
 
@@ -232,6 +242,11 @@ def start_plan():
                 matched_plan_list.append(plan)
         except Exception as e:
             log_error(f"[{plan_detail}]: {e}")
+
+    if next_plan is not None:
+        log(log_head * 3)
+        log_plan(next_message, next_left_seconds)
+        log(log_head * 3)
 
     noti_current_plan(matched_plan_list)
 
