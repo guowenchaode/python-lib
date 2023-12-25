@@ -283,6 +283,7 @@ def start_plan_and_wait():
         except:
             pass
         finally:
+            log(f'wait {wait_time} seconds')
             sleep(wait_time)
 
 

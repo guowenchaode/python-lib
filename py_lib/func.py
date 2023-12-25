@@ -45,14 +45,32 @@ log_head = "*********************"
 sys.stdout.reconfigure(encoding="utf-8")
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-logging.basicConfig(
-    level=logging.INFO,
-    filename=f"D:\__cache\logs\{current_date}.log",
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    filemode="a",
-)
-logger = logging.getLogger(__name__)
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
+
+# logging.basicConfig(
+#     level=logging.INFO,
+#     filename=f"D:\__cache\logs\{current_date}.log",
+#     format="%(asctime)s [%(thread)d] [%(levelname)s]: %(message)s",
+#     filemode="a",
+# )
+
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+# 设置将日志输出到文件中，并且定义文件内容
+now = datetime.datetime.now().strftime("%Y-%m-%d")
+fileinfo = logging.FileHandler(f"D:\__cache\logs\{current_date}.log")
+fileinfo.setLevel(logging.INFO)
+# 设置将日志输出到控制台
+controlshow = logging.StreamHandler()
+controlshow.setLevel(logging.INFO)
+# 设置日志的格式
+formatter = logging.Formatter("%(asctime)s [%(thread)d] [%(levelname)s]: %(message)s")
+fileinfo.setFormatter(formatter)
+controlshow.setFormatter(formatter)
+
+logger.addHandler(fileinfo)
+logger.addHandler(controlshow)
+
 
 # 记录日志信息
 # logger.debug('debug message')
