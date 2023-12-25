@@ -89,10 +89,12 @@ def run():
 
 def start_threads(enable_cam=True, enable_plan=True):
     if enable_cam:
+        log('start cam thread')
         thread = Thread(target=start_cam)
         thread.start()
 
     if enable_plan:
+        log('start plan thread')
         thread = Thread(target=start_plan_and_wait)
         thread.start()
 

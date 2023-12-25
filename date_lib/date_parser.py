@@ -236,6 +236,9 @@ def start_plan():
             delta = get_delta(date_time, now)
             left_seconds = int(delta.total_seconds())
 
+            if left_seconds < 0:
+                continue
+
             is_current = is_current_plan(left_seconds)
             msg = f"[{i}] [{left_seconds}] => [{delta}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
 
@@ -283,7 +286,7 @@ def start_plan_and_wait():
         except:
             pass
         finally:
-            log(f'wait {wait_time} seconds')
+            log(f"wait {wait_time} seconds")
             sleep(wait_time)
 
 

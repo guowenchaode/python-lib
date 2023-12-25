@@ -103,7 +103,8 @@ def start_cam():
             if not open_cam(fps, vs):
                 break
         except Exception as e:
-            traceback.print_exc()
+            pass
+            # traceback.print_exc()
 
 
 if __name__ == "__main__":
