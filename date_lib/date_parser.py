@@ -124,7 +124,7 @@ def parse_date(reg):
     # print(f"e={e}")
 
 
-dict_list = "D:\__Alex\config\main\db\plan.csv"
+dict_list = r"D:\Share\plan.csv"
 
 
 def is_late_hour():
