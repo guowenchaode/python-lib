@@ -159,7 +159,7 @@ def noti_current_plan(plan_list):
         return
 
     # [h, m, s, *ms] = re.split("[.:]", delta_time)
-    msg = f"请注意请注意,现在{plan_detail},{plan_detail}"
+    msg = f"请注意,现在{plan_detail},{plan_detail}"
     speak(msg)
 
 
