@@ -274,12 +274,12 @@ def log_error(l):
     log(l, WARNING)
 
 
-def log(l=log_head, color=ENDC, show_time=True):
+def log(l=log_head, color=""):
     currentDT = datetime.datetime.now()
     dt = currentDT.strftime("%Y-%m-%d %H:%M:%S")
     # info = '\t'.join(l)
     l = str(l)
-    message = f"{color}{l}{ENDC}" if show_time else f"{color}{l}{ENDC}"
+    message = f"{l}" if color == "" else f"{color}{l}{ENDC}"
     # logger.info(l)
     logger.info(message)
     # print(message)
