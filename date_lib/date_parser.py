@@ -129,7 +129,8 @@ dict_list = "D:\__Alex\config\main\db\plan.csv"
 
 def is_late_hour():
     now = datetime.now()
-    is_late = now.hour >= 0 and now.hour <= 6
+    hour = now.hour
+    is_late = hour >= 22 or (hour >= 0 and hour <= 6)
     return is_late
 
 
@@ -164,6 +165,7 @@ def noti_current_plan(plan_list):
 
 
 wait_time = 10
+current_phone = "Honor Magic 2"
 
 
 def get_delta(plan_date, now):
@@ -229,8 +231,14 @@ def start_plan():
         is_active = plan.get("active/String") != "N"
         plan_exp = plan.get("dateExp/String")
         plan_detail = plan.get("detail/String")
+        phone = plan.get("phone/String")
+
         try:
-            if date_time is None or not is_active:
+            if (
+                date_time is None
+                or not is_active
+                or (phone is not None and phone != "" and phone != current_phone)
+            ):
                 continue
 
             delta = get_delta(date_time, now)
