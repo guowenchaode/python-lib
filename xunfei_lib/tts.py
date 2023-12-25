@@ -88,7 +88,8 @@ STATUS_CONTINUE_FRAME = 1  # 中间帧标识
 STATUS_LAST_FRAME = 2  # 最后一帧的标识
 
 # pcm_dir = r"W:\Downloads"
-pcm_dir=r'D:\__cache\plan'
+pcm_dir = r"D:\__cache\plan"
+
 
 class Ws_Param(object):
     # 初始化
@@ -159,6 +160,7 @@ class tts_speaker:
             APIKey="9205fab03853da6d587883bcbd011004",
             Text=text,
         )
+        self.text = text
         websocket.enableTrace(False)
         dts = dt()
         self.pcm_file = f"{pcm_dir}/{pac_name}.{dts}.pcm"
@@ -210,7 +212,7 @@ class tts_speaker:
         thread.start_new_thread(run, ())
 
     def speak(self):
-        # 测试时候在此处正确填写相关信息即可运行
+        log(f"speak [{self.text}]")
         wsUrl = self.wsParam.create_url()
         ws = websocket.WebSocketApp(
             wsUrl,
@@ -267,7 +269,9 @@ def play_wav(wav_path):
 
 def play_pcm(pcm_path):
     wav_path = f"{pcm_path}.wav"
+    log(f"play pcm: {pcm_path}")
     pcm2wav(pcm_path, wav_path)
+    log(f"play wav: {wav_path}")
     play_wav(wav_path)
 
 
