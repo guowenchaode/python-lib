@@ -87,8 +87,8 @@ STATUS_FIRST_FRAME = 0  # 第一帧的标识
 STATUS_CONTINUE_FRAME = 1  # 中间帧标识
 STATUS_LAST_FRAME = 2  # 最后一帧的标识
 
-pcm_dir = r"W:\Downloads"
-
+# pcm_dir = r"W:\Downloads"
+pcm_dir=r'D:\__cache\plan'
 
 class Ws_Param(object):
     # 初始化
@@ -144,10 +144,10 @@ class Ws_Param(object):
         v = {"authorization": authorization, "date": date, "host": "ws-api.xfyun.cn"}
         # 拼接鉴权参数，生成url
         url = url + "?" + urlencode(v)
-        # print("date: ",date)
-        # print("v: ",v)
+        # log("date: ",date)
+        # log("v: ",v)
         # 此处打印出建立连接时候的url,参考本demo的时候可取消上方打印的注释，比对相同参数时生成的url与自己代码生成的url是否一致
-        # print('websocket url :', url)
+        # log('websocket url :', url)
         return url
 
 
@@ -173,25 +173,25 @@ class tts_speaker:
             status = message["data"]["status"]
             if code != 0:
                 errMsg = message["message"]
-                print("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
+                log("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
             else:
                 with open(self.pcm_file, "ab") as f:
                     f.write(audio)
 
             if status == 2:
                 play_pcm(self.pcm_file)
-                print("ws is closed")
+                log("ws is closed")
                 ws.close()
         except Exception as e:
-            print("receive msg,but parse exception:", e)
+            log("receive msg,but parse exception:", e)
 
     # 收到websocket错误的处理
     def on_error(self, ws, error):
-        print("### error:", error)
+        log("### error:", error)
 
     # 收到websocket关闭的处理
     def on_close(self, ws):
-        print("### closed ###")
+        log("### closed ###")
 
     # 收到websocket连接建立的处理
     def on_open(self, ws):
@@ -202,7 +202,7 @@ class tts_speaker:
                 "data": self.wsParam.Data,
             }
             d = json.dumps(d)
-            print("------>开始发送文本数据")
+            log("------>开始发送文本数据")
             ws.send(d)
             if os.path.exists(self.pcm_file):
                 os.remove(self.pcm_file)

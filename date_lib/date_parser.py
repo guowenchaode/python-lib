@@ -158,10 +158,6 @@ def noti_current_plan(plan_list):
         log_error("plan is empty")
         return
 
-    if is_late_hour():
-        log_error("is late hour")
-        return
-
     # [h, m, s, *ms] = re.split("[.:]", delta_time)
     msg = f"请注意请注意,现在{plan_detail},{plan_detail}"
     speak(msg)
@@ -178,7 +174,7 @@ def get_delta(plan_date, now):
 
 
 def is_current_plan(left_seconds):
-    if left_seconds < 0:
+    if left_seconds < -1:
         return False
 
     if left_seconds <= wait_time:
@@ -200,16 +196,16 @@ def start_plan():
             plan = plan_list[i]
             date_time = date_time_list[i]
             plan["date"] = date_time
-            is_active = plan.get("active/String") != "N"
-            plan_exp = plan.get("dateExp/String")
-            plan_detail = plan.get("detail/String")
-            delta = get_delta(date_time, now)
-            msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{plan_exp}] =>  {plan_detail}"
+            # is_active = plan.get("active/String") != "N"
+            # plan_exp = plan.get("dateExp/String")
+            # plan_detail = plan.get("detail/String")
+            # delta = get_delta(date_time, now)
+            # msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{plan_exp}] =>  {plan_detail}"
 
-            if is_active:
-                log_error(msg)
-            else:
-                log(msg)
+            # if is_active:
+            #     log_error(msg)
+            # else:
+            #     log(msg)
         except:
             pass
 
@@ -240,11 +236,8 @@ def start_plan():
             delta = get_delta(date_time, now)
             left_seconds = int(delta.total_seconds())
 
-            if left_seconds < 0:
-                continue
-
             is_current = is_current_plan(left_seconds)
-            msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{left_seconds}] => [{plan_exp}] =>  {plan_detail}"
+            msg = f"[{i}] [{left_seconds}] => [{delta}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
 
             if left_seconds > 0 and next_plan is None:
                 next_plan = plan
@@ -283,7 +276,10 @@ def log_plan(msg, left_seconds):
 def start_plan_and_wait():
     while True:
         try:
-            start_plan()
+            if is_late_hour():
+                log_error("is late hour")
+            else:
+                start_plan()
         except:
             pass
         finally:
