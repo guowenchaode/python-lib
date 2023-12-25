@@ -58,12 +58,12 @@ def process_qr(cam_frame):
 
     set_copied(data)
     if data == last_data:
-        print(f"QRCode data: same data")
+        log(f"QRCode data: same data")
     else:
         date_time = dt()
         log = f"{date_time}:\t[{data}]\n"
         last_data = data
-        print(f"QRCode data:\n{data}")
+        log(f"QRCode data:\n{data}")
         write_file(LOG_PATH, log)
 
 

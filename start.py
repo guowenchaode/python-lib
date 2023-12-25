@@ -103,7 +103,7 @@ def start_threads(enable_cam=True, enable_plan=True):
     # thread.start()
 
 
-def main(enable_cam=False, enable_plan=True, slp=3):
+def main(enable_cam=True, enable_plan=True, slp=3):
     # START THREAD
     start_threads(enable_cam, enable_plan)
     while True:
