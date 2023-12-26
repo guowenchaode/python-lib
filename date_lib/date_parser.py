@@ -130,7 +130,8 @@ dict_list = r"D:\Share\plan.csv"
 def is_late_hour():
     now = datetime.now()
     hour = now.hour
-    is_late = hour >= 22 or (hour >= 0 and hour <= 6)
+    minute = now.minute
+    is_late = hour >= 22 or hour <= 5 or (hour == 6 and minute <= (60 - wait_time))
     return is_late
 
 
@@ -140,10 +141,6 @@ def noti_next_plan(plan_list):
 
     if len(plan_list) == 0:
         log_error("plan is empty")
-        return
-
-    if is_late_hour():
-        log_error("is late hour")
         return
 
     # [h, m, s, *ms] = re.split("[.:]", delta_time)
