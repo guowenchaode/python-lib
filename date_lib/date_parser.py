@@ -161,7 +161,7 @@ def noti_current_plan(plan_list):
     speak(msg)
 
 
-wait_time = 10
+wait_time = 30
 current_phone = "Honor Magic 2"
 
 
@@ -179,7 +179,12 @@ def is_current_plan(left_seconds):
     return False
 
 
+last_alert_message = ""
+
+
 def start_plan():
+    global last_alert_message
+
     plan_list = to_dict_list(dict_list)
     date_exp_list = [plan.get("dateExp/String") for plan in plan_list]
     date_list_info = parse_date_list_java(" ".join(date_exp_list))
@@ -194,16 +199,6 @@ def start_plan():
             date_info = date_time_list[i]
             plan["date"] = date_info.get("value")
             plan["left_seconds"] = date_info.get("comment")
-            # is_active = plan.get("active/String") != "N"
-            # plan_exp = plan.get("dateExp/String")
-            # plan_detail = plan.get("detail/String")
-            # delta = get_delta(date_time, now)
-            # msg = f"[{i}]:[{is_active}] => [{date_time}] => [{delta}] => [{plan_exp}] =>  {plan_detail}"
-
-            # if is_active:
-            #     log_error(msg)
-            # else:
-            #     log(msg)
         except:
             pass
 
@@ -261,13 +256,17 @@ def start_plan():
         except Exception as e:
             log_error(f"[{plan_detail}]: {e}")
 
-    if next_plan is not None:
+    if len(matched_plan_list) > 0:
+        noti_current_plan(matched_plan_list)
+    elif next_plan is not None:
         log(log_head * 3)
         log_plan(next_message, next_left_seconds)
         log(log_head * 3)
 
-    if len(matched_plan_list) > 0:
-        noti_current_plan(matched_plan_list)
+        if last_alert_message != next_message:
+            noti_next_plan([next_plan])
+
+        last_alert_message = next_message
 
 
 def log_plan(msg, left_seconds):
