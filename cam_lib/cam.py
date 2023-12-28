@@ -108,4 +108,4 @@ def start_cam():
 
 
 if __name__ == "__main__":
-    open()
+    start_cam()

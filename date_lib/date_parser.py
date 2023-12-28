@@ -18,6 +18,7 @@ from py_lib.func import (
     FAIL,
     OKGREEN,
     loop_dir,
+    to_json,
     to_date_time,
     to_dict_list,
     execute,
@@ -107,12 +108,11 @@ class plan_parser:
         next_date = self.parse_next_date(reg_list, date_list)
 
 
-def parse_date_list(reg_list):
+def parse_date_list_java(reg_list):
     command = f"java utils.function.DateParser {reg_list}"
     rs, e = execute(command)
-    reg_list = rs.split("==")
-    dt_list = [to_date_time(reg) for reg in reg_list]
-    return dt_list
+    result = to_json(rs)
+    return result
 
 
 def parse_date(reg):
@@ -173,9 +173,6 @@ def get_delta(plan_date, now):
 
 
 def is_current_plan(left_seconds):
-    if left_seconds < -1:
-        return False
-
     if left_seconds <= wait_time:
         return True
 
@@ -185,16 +182,18 @@ def is_current_plan(left_seconds):
 def start_plan():
     plan_list = to_dict_list(dict_list)
     date_exp_list = [plan.get("dateExp/String") for plan in plan_list]
-    date_time_list = parse_date_list(" ".join(date_exp_list))
+    date_list_info = parse_date_list_java(" ".join(date_exp_list))
+    date_time_list = date_list_info.get("planInfos")
 
-    now = datetime.now()
+    now = date_list_info.get("now")
 
     matched_plan_list = []
     for i in range(len(plan_list)):
         try:
             plan = plan_list[i]
-            date_time = date_time_list[i]
-            plan["date"] = date_time
+            date_info = date_time_list[i]
+            plan["date"] = date_info.get("value")
+            plan["left_seconds"] = date_info.get("comment")
             # is_active = plan.get("active/String") != "N"
             # plan_exp = plan.get("dateExp/String")
             # plan_detail = plan.get("detail/String")
@@ -212,7 +211,7 @@ def start_plan():
         date = plan.get("date")
         if date is None:
             return -1
-        return date.timestamp()
+        return date
 
     sorted_list = sorted(plan_list, key=sort_plan)
 
@@ -229,23 +228,24 @@ def start_plan():
         plan_exp = plan.get("dateExp/String")
         plan_detail = plan.get("detail/String")
         phone = plan.get("phone/String")
+        left_seconds = plan.get("left_seconds")
 
         try:
             if (
                 date_time is None
                 or not is_active
+                or left_seconds is None
                 or (phone is not None and phone != "" and phone != current_phone)
             ):
                 continue
 
-            delta = get_delta(date_time, now)
-            left_seconds = int(delta.total_seconds())
+            left_seconds = int(left_seconds)
 
             if left_seconds < 0:
                 continue
 
             is_current = is_current_plan(left_seconds)
-            msg = f"[{i}] [{left_seconds}] => [{delta}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
+            msg = f"[{i}] [{left_seconds}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
 
             if left_seconds > 0 and next_plan is None:
                 next_plan = plan

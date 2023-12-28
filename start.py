@@ -69,32 +69,21 @@ from date_lib.date_parser import start_plan_and_wait
 
 def run():
     try:
-        ## save active title
-        log_error(f"[TASK] save task list")
-
-        # save_active_title
-        # save_active_title()
-
-        # monite()
-
-        last_url = get_last_history()
-
-        log_error(f"[url]{last_url}")
-
-        # save_work_note
-        # save_work_note()
+        pass
+    # save_work_note
+    # save_work_note()
     except Exception as e:
         traceback.print_exc()
 
 
 def start_threads(enable_cam=True, enable_plan=True):
     if enable_cam:
-        log('start cam thread')
+        log("start cam thread")
         thread = Thread(target=start_cam)
         thread.start()
 
     if enable_plan:
-        log('start plan thread')
+        log("start plan thread")
         thread = Thread(target=start_plan_and_wait)
         thread.start()
 
@@ -103,14 +92,37 @@ def start_threads(enable_cam=True, enable_plan=True):
 
     # thread = Thread(target=start_self_service)
     # thread.start()
+    thread = Thread(target=monite_pc)
+    thread.start()
+
+
+def monite_pc(slp=60):
+    while True:
+        try:
+            ## save active title
+            log_error(f"[TASK] save task list")
+
+            # save_active_title
+            # save_active_title()
+
+            # monite()
+
+            last_url = get_last_history()
+
+            log_error(f"[url]{last_url}")
+
+        except print(0):
+            pass
+        finally:
+            time.sleep(slp)
 
 
 def main(enable_cam=True, enable_plan=True, slp=3):
     # START THREAD
+    log(f"Start Main Thread")
     start_threads(enable_cam, enable_plan)
     while True:
         try:
-            log(f"Start Main Thread")
             run()
         except print(0):
             pass

@@ -413,3 +413,7 @@ def to_date_time(date_str, reg="%Y/%m/%d %H:%M:%S"):
         return datetime.datetime.strptime(date_str, reg)
     except:
         return None
+
+
+def to_json(str):
+    return json.loads(str)

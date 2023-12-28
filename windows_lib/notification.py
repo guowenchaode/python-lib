@@ -6,7 +6,15 @@ import sys
 
 sys.path.append(r"D:/Git/github/python-lib")
 
-from py_lib.func import log, write_file, dt, set_copied
+from py_lib.func import (
+    log,
+    log_error,
+    sleep,
+    read_file,
+    write_file,
+    format_json,
+    loop_dir,
+)
 
 ########################################
 
@@ -25,6 +33,7 @@ def build_arg_parser():
     parser = argparse.ArgumentParser(description="Action")
     parser.add_argument("--action", dest="action", required=False, help="action")
     parser.add_argument("--text", dest="text", required=False, help="text")
+    parser.add_argument("--title", dest="title", required=False, help="title")
     args, left = parser.parse_known_args()
     return args
 
@@ -39,34 +48,12 @@ def test(txt):
 """
 INPUT YOUR SCRIPT HERE
 """
-import cv2
-from windows_lib.notification import noti
 
-LOG_PATH = r"D:/__cache/qr_code/input.log"
-
-last_data = ""
+from plyer import notification
 
 
-def process_qr(cam_frame):
-    global last_data
-    # detect and decode
-    detector = cv2.QRCodeDetector()
-    data, bbox, straight_qrcode = detector.detectAndDecode(cam_frame)
-    # if there is a QR code
-
-    if bbox is None or data == "":
-        return
-
-    if data == last_data:
-        log(f"QRCode data: same data")
-    else:
-        set_copied(data)
-        date_time = dt()
-        msg = f"{date_time}:\t[{data}]\n"
-        last_data = data
-        log(f"QRCode data:\n{msg}")
-        write_file(LOG_PATH, msg)
-        noti("qr saved")
+def noti(message, title="Hi Alex"):
+    notification.notify(title=title, message=message, timeout=5)
 
 
 ########################################
@@ -84,7 +71,7 @@ if __name__ == "__main__":
         if args.action == "test":
             test(args.text)
         else:
-            test(args.text)
+            noti(args.text, args.title)
         ###########################################
         end = datetime.now()
         inter = end - start
