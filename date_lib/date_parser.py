@@ -144,7 +144,7 @@ def noti_next_plan(plan_list):
         return
 
     # [h, m, s, *ms] = re.split("[.:]", delta_time)
-    msg = f"请注意,即将{plan_detail}"
+    msg = f"请做好准备,{plan_detail}"
     speak(msg)
 
 
@@ -245,6 +245,7 @@ def start_plan():
             if left_seconds > 0 and next_plan is None:
                 next_plan = plan
                 next_message = msg
+                next_detail = plan_detail
                 next_left_seconds = left_seconds
 
             log_plan(msg, left_seconds)
@@ -258,15 +259,14 @@ def start_plan():
 
     if len(matched_plan_list) > 0:
         noti_current_plan(matched_plan_list)
+        last_alert_message = ""
     elif next_plan is not None:
         log(log_head * 3)
         log_plan(next_message, next_left_seconds)
         log(log_head * 3)
-
-        if last_alert_message != next_message:
+        if last_alert_message != next_detail:
             noti_next_plan([next_plan])
-
-        last_alert_message = next_message
+            last_alert_message = next_detail
 
 
 def log_plan(msg, left_seconds):
