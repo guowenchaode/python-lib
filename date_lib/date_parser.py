@@ -14,6 +14,7 @@ from py_lib.func import (
     write_file,
     format_json,
     log_head,
+    get_delta_time_by_str,
     OKCYAN,
     FAIL,
     OKGREEN,
@@ -135,16 +136,14 @@ def is_late_hour():
     return is_late
 
 
-def noti_next_plan(plan_list):
-    plan_detail = [plan.get("detail/String") for plan in plan_list]
+def noti_next_plan(next_plan):
+    plan_detail = next_plan.get("detail/String")
+    date_time = next_plan.get("date")
+    delta = get_delta_time_by_str(date_time)
     log(f"[下一计划]:{plan_detail}")
 
-    if len(plan_list) == 0:
-        log_error("plan is empty")
-        return
-
     # [h, m, s, *ms] = re.split("[.:]", delta_time)
-    msg = f"请做好准备,{plan_detail}"
+    msg = f"请做好准备,{delta}后,{plan_detail}"
     speak(msg)
 
 
@@ -240,7 +239,8 @@ def start_plan():
                 continue
 
             is_current = is_current_plan(left_seconds)
-            msg = f"[{i}] [{left_seconds}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
+            delta = get_delta_time_by_str(date_time)
+            msg = f"[{i}] [{left_seconds}] => [{delta}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
 
             if left_seconds > 0 and next_plan is None:
                 next_plan = plan
@@ -265,7 +265,7 @@ def start_plan():
         log_plan(next_message, next_left_seconds)
         log(log_head * 3)
         if last_alert_message != next_detail:
-            noti_next_plan([next_plan])
+            noti_next_plan(next_plan)
             last_alert_message = next_detail
 
 

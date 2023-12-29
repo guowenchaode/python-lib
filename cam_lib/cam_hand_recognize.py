@@ -128,7 +128,7 @@ if __name__ == "__main__":
     accumWeight = 0.5
 
     # get the reference to the webcam
-    camera = cv2.VideoCapture(0)
+    camera = cv2.VideoCapture(1)
 
     # region of interest (ROI) coordinates
     #top, right, bottom, left = 10, 350, 225, 590

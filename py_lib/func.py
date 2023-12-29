@@ -417,3 +417,25 @@ def to_date_time(date_str, reg="%Y/%m/%d %H:%M:%S"):
 
 def to_json(str):
     return json.loads(str)
+
+
+def get_delta_time_by_str(date_time_str):
+    delta = get_delta_time(to_date_time(date_time_str))
+    delta = f"{delta}"
+    result = ""
+    if "," in delta:
+        (days, times) = delta.split(", ")
+        d = days.replace(" days", "")
+        (h, m, s) = times.split(":")
+        result = f"{d}天，{h}小时，{m}分，{s}秒"
+    else:
+        (h, m, s) = delta.split(":")
+        s = int(float(s))
+        result = f",{h}小时,{m}分,{s}秒"
+
+    result = result.replace(",0小时", "").replace(",0分", "").replace(",0秒", "")
+    return result
+
+
+def get_delta_time(date_time):
+    return date_time - datetime.datetime.now()

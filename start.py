@@ -148,7 +148,7 @@ if __name__ == "__main__":
             main(args.enable_plan)
         else:
             # test(args.text)
-            main()
+            main(True, True)
         ###########################################
         end = datetime.now()
         inter = end - start
