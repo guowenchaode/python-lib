@@ -33,6 +33,7 @@ import time
 import traceback
 import re
 from datetime import datetime
+from socket_lib.socket_client import send_heart_beat
 
 ############### SAMPLE ################
 # time.sleep(1)
@@ -290,6 +291,7 @@ def start_plan_and_wait():
         except:
             pass
         finally:
+            send_heart_beat()
             log(f"wait {wait_time} seconds")
             sleep(wait_time)
 

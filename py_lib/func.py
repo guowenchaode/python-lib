@@ -419,6 +419,15 @@ def to_json(str):
     return json.loads(str)
 
 
+def parse_delta_time(delta):
+    (h, m, s) = delta.split(":")
+    s = int(float(s))
+    result = f",{h}小时,{m}分,{s}秒"
+
+    result = result.replace(",0小时", "").replace(",0分", "").replace(",0秒", "")
+    return result.replace(",", "")
+
+
 def get_delta_time_by_str(date_time_str):
     delta = get_delta_time(to_date_time(date_time_str))
     delta = f"{delta}"
@@ -427,13 +436,11 @@ def get_delta_time_by_str(date_time_str):
         (days, times) = delta.split(", ")
         d = days.replace(" days", "")
         (h, m, s) = times.split(":")
-        result = f"{d}天，{h}小时，{m}分，{s}秒"
-    else:
-        (h, m, s) = delta.split(":")
-        s = int(float(s))
-        result = f",{h}小时,{m}分,{s}秒"
+        time_delta = parse_delta_time(times)
+        result = f",{d}天{time_delta}".replace(",0天", "")
 
-    result = result.replace(",0小时", "").replace(",0分", "").replace(",0秒", "")
+    else:
+        result = parse_delta_time(delta)
     return result
 
 
