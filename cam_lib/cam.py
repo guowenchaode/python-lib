@@ -50,6 +50,18 @@ face_cascade = cv2.CascadeClassifier(
 if face_cascade.empty():
     raise IOError("Unable to load the face cascade classifier xml file")
 
+video_index = 1
+
+
+def read_frame(cap):
+    (ret, frame) = cap.read()
+    return frame
+
+
+def wait_key(chr="q"):
+    key = cv2.waitKey(1) & 0xFF
+    return key == ord(chr)
+
 
 def process(frame):
     try:
@@ -108,32 +120,21 @@ def show_rectangle(
 
 
 def open_cam(cap):
-    success = True
-    while True:
-        (ret, frame) = cap.read()
-        process(frame)
-        # cv2.imshow("Frame", frame)
-        key = cv2.waitKey(1) & 0xFF
-        # if the `q` key was pressed, break from the loop
-        if key == ord("q"):
-            success = False
-            break
-    # fps.stop()
-
-    # print("[INFO] elapsed time: {:.2f}".format(fps.elapsed()))
-    # print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
-    # do a bit of cleanup
-    return success
+    try:
+        while True:
+            frame = read_frame(cap)
+            process(frame)
+            if wait_key():
+                return True
+    except Exception as e:
+        traceback.print_exc()
+        return False
 
 
 def start_cam():
     while True:
         try:
-            video_index = 1
-            # vs = VideoStream(vf)
             cap = cv2.VideoCapture(video_index)
-            # ret, frame=
-            # fps = FPS().start()
             success = open_cam(cap)
             if not success:
                 break

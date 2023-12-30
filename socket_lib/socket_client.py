@@ -67,7 +67,7 @@ def send_message(message, ip="192.168.3.137", port=2019):
 
 def start_send_message(message, ip="192.168.3.137", port=2019):
     try:
-        log(f"start send message to server {ip}:{port}")
+        log(f"start send message [{message}] to server {ip}:{port}")
         ip_port = (ip, port)
 
         client = socket.socket()  # 创建一个套接字
