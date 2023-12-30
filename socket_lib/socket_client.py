@@ -54,18 +54,22 @@ import socket
 
 MESSAGE_END = "@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@#@"
 
+DEFAULT_SERVER_IP = "192.168.3.137"
+# DEFAULT_SERVER_IP = "192.168.3.13"
+DEFAULT_SERVER_PORT = 2019
 
-def send_heart_beat(ip="192.168.3.137", port=2019):
+
+def send_heart_beat(ip=DEFAULT_SERVER_IP, port=DEFAULT_SERVER_PORT):
     heart_beat_message = f"msg=heartbeat{MESSAGE_END}"
     send_message(heart_beat_message)
 
 
-def send_message(message, ip="192.168.3.137", port=2019):
+def send_message(message, ip=DEFAULT_SERVER_IP, port=DEFAULT_SERVER_PORT):
     thread = Thread(target=start_send_message, args=(message, ip, port))
     thread.start()
 
 
-def start_send_message(message, ip="192.168.3.137", port=2019):
+def start_send_message(message, ip=DEFAULT_SERVER_IP, port=DEFAULT_SERVER_PORT):
     try:
         log(f"start send message [{message}] to server {ip}:{port}")
         ip_port = (ip, port)
