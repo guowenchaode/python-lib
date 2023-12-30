@@ -107,10 +107,10 @@ def show_rectangle(
     )
 
 
-def open_cam(fps, vs):
+def open_cam(cap):
     success = True
     while True:
-        frame = vs.read()
+        (ret, frame) = cap.read()
         process(frame)
         # cv2.imshow("Frame", frame)
         key = cv2.waitKey(1) & 0xFF
@@ -118,27 +118,29 @@ def open_cam(fps, vs):
         if key == ord("q"):
             success = False
             break
-        fps.update()
-    fps.stop()
-    print("[INFO] elapsed time: {:.2f}".format(fps.elapsed()))
-    print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
+    # fps.stop()
+
+    # print("[INFO] elapsed time: {:.2f}".format(fps.elapsed()))
+    # print("[INFO] approx. FPS: {:.2f}".format(fps.fps()))
     # do a bit of cleanup
-    cv2.destroyAllWindows()
-    vs.stop()
     return success
 
 
 def start_cam():
     while True:
         try:
-            vf = 1
-            vs = VideoStream(vf).start()
-            fps = FPS().start()
-            if not open_cam(fps, vs):
+            video_index = 1
+            # vs = VideoStream(vf)
+            cap = cv2.VideoCapture(video_index)
+            # ret, frame=
+            # fps = FPS().start()
+            success = open_cam(cap)
+            if not success:
                 break
+            cap.release()
+            cv2.destroyAllWindows()
         except Exception as e:
-            pass
-            # traceback.print_exc()
+            traceback.print_exc()
 
 
 if __name__ == "__main__":

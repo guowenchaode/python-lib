@@ -435,13 +435,12 @@ def get_delta_time_by_str(date_time_str):
     if "," in delta:
         (days, times) = delta.split(", ")
         d = days.replace(" days", "")
-        (h, m, s) = times.split(":")
         time_delta = parse_delta_time(times)
         result = f",{d}天{time_delta}".replace(",0天", "")
 
     else:
         result = parse_delta_time(delta)
-    return result
+    return result.replace(",", "")
 
 
 def get_delta_time(date_time):

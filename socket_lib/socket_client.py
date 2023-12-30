@@ -23,6 +23,7 @@ import os
 import time
 import traceback
 from datetime import datetime
+from threading import Thread
 
 ############### SAMPLE ################
 # time.sleep(1)
@@ -60,18 +61,28 @@ def send_heart_beat(ip="192.168.3.137", port=2019):
 
 
 def send_message(message, ip="192.168.3.137", port=2019):
-    log(f"send message to server {ip}:{port}")
-    ip_port = (ip, port)
+    thread = Thread(target=start_send_message, args=(message, ip, port))
+    thread.start()
 
-    client = socket.socket()  # 创建一个套接字
-    client.connect(ip_port)  # 连接目标IP的目标端口
 
-    tmp = message.encode()
-    client.send(tmp)
+def start_send_message(message, ip="192.168.3.137", port=2019):
+    try:
+        log(f"start send message to server {ip}:{port}")
+        ip_port = (ip, port)
 
-    # data = client.recv(1024)  # 返回接收到的数据
-    # log(f"[server-message]:{data}")
-    # return data
+        client = socket.socket()  # 创建一个套接字
+        client.connect(ip_port)  # 连接目标IP的目标端口
+
+        tmp = message.encode()
+        client.send(tmp)
+
+        data = client.recv(1024)  # 返回接收到的数据
+        log(f"[server-message]:{data}")
+        return data
+    except Exception as e:
+        traceback.print_exc()
+    finally:
+        log(f"send message completed!")
 
 
 ########################################
@@ -89,7 +100,7 @@ if __name__ == "__main__":
         if args.action == "test":
             test(args.text)
         else:
-            test(args.text)
+            send_heart_beat()
         ###########################################
         end = datetime.now()
         inter = end - start
