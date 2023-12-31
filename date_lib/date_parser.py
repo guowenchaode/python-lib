@@ -61,55 +61,6 @@ INPUT YOUR SCRIPT HERE
 from xunfei_lib.tts import speak
 
 
-class plan_parser:
-    def __init__(self):
-        self.date = dt()
-
-    # 12 ~ 12 True
-    # 12 ~ [1, 12, 13] True
-    # 12 ~ [1-10, 12] True
-    # 12 ~ [1-10] True
-    # 12 ~ * True
-    def match_exp_arr(self, value, reg):
-        # 12 ~ [1-10, 12] True
-        reg = reg.replace("[", "").replace("]", "")
-        num_arr = reg.split(",")
-        for i in list(num_arr):
-            if i == value:
-                return True
-            elif "-" in i and in_range(i, value):
-                return True
-        return False
-
-    def match_element(self, value, reg):
-        log(f"compare {value} ~ {reg}")
-        if value == reg or reg == "*":
-            log(f"{value} ~= {reg}")
-            return True
-        elif self.match_exp_arr(value, reg):
-            return True
-        return False
-
-    def match_all(self, reg_list, date_list):
-        for i in range(7):
-            reg = reg_list[i]
-            value = date_list[i]
-            if not self.match_element(value, reg):
-                return False
-        return True
-
-    def parse_next_date(self, reg_list, date_list):
-        while not self.match_all(reg_list, date_list):
-            pass
-        log("success")
-        return ""
-
-    def parse(self, date_exp, date_str):
-        reg_list = parse_element(date_exp)
-        date_list = parse_element(date_str)
-        next_date = self.parse_next_date(reg_list, date_list)
-
-
 def parse_date_list_java(reg_list):
     command = f"java utils.function.DateParser {reg_list}"
     rs, e = execute(command)
@@ -122,8 +73,6 @@ def parse_date(reg):
     rs, e = execute(command)
     dt = datetime.strptime(rs, "%Y/%m/%d %H:%M:%S")
     return dt
-    # print(f"rs={rs}")
-    # print(f"e={e}")
 
 
 dict_list = r"D:\Share\plan.csv"
@@ -143,7 +92,6 @@ def noti_next_plan(next_plan):
     delta = get_delta_time_by_str(date_time)
     log(f"[下一计划]:{plan_detail}")
 
-    # [h, m, s, *ms] = re.split("[.:]", delta_time)
     msg = f"请做好准备,{delta}后,{plan_detail}"
     speak(msg)
 
@@ -156,7 +104,6 @@ def noti_current_plan(plan_list):
         log_error("plan is empty")
         return
 
-    # [h, m, s, *ms] = re.split("[.:]", delta_time)
     msg = f"请注意,现在{plan_detail},{plan_detail}"
     speak(msg)
 
