@@ -68,9 +68,8 @@ def process(frame):
         process_object(frame)
         process_face(frame)
         process_qr(frame)
-    except Exception as e:
+    except:
         traceback.print_exc()
-        raise e
 
 
 def process_face(frame):
@@ -126,7 +125,7 @@ def open_cam(cap):
             process(frame)
             if wait_key():
                 return True
-    except Exception as e:
+    except:
         traceback.print_exc()
         return False
 
@@ -140,7 +139,7 @@ def start_cam():
                 break
             cap.release()
             cv2.destroyAllWindows()
-        except Exception as e:
+        except:
             traceback.print_exc()
 
 
