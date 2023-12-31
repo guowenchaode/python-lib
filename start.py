@@ -34,7 +34,13 @@ def build_arg_parser():
     parser.add_argument("--action", dest="action", required=False, help="action")
     parser.add_argument("--text", dest="text", required=False, help="text")
     parser.add_argument(
+        "--video_index", dest="video_index", required=False, help="video_index"
+    )
+    parser.add_argument(
         "--enable_plan", dest="enable_plan", required=False, help="enable_plan"
+    )
+    parser.add_argument(
+        "--enable_video", dest="enable_video", required=False, help="enable_video"
     )
     args, left = parser.parse_known_args()
     return args
@@ -76,10 +82,10 @@ def run():
         traceback.print_exc()
 
 
-def start_threads(enable_cam=True, enable_plan=True):
+def start_threads(video_index=1, enable_cam=True, enable_plan=True):
     if enable_cam:
         log("start cam thread")
-        thread = Thread(target=start_cam)
+        thread = Thread(target=start_cam, args=(video_index,))
         thread.start()
 
     if enable_plan:
@@ -117,10 +123,12 @@ def monite_pc(slp=60):
             time.sleep(slp)
 
 
-def main(enable_cam=True, enable_plan=True, slp=3):
+def main(video, enable_cam=True, enable_plan=True, slp=3):
     # START THREAD
-    log(f"Start Main Thread")
-    start_threads(enable_cam, enable_plan)
+    log(
+        f"Start Main Thread, video={video} enable_cam={enable_cam} enable_plan={enable_plan}"
+    )
+    start_threads(video, enable_cam, enable_plan)
     while True:
         try:
             run()
@@ -145,10 +153,10 @@ if __name__ == "__main__":
         if args.action == "test":
             test(args.text)
         elif args.action == "start":
-            main(args.enable_plan)
+            main(int(args.video_index), bool(args.enable_plan), bool(args.enable_video))
         else:
             # test(args.text)
-            main(True, True)
+            main(int(2), bool("True"), bool("True"))
         ###########################################
         end = datetime.now()
         inter = end - start

@@ -2,8 +2,20 @@
 # Modified based on:
 # https://www.pyimagesearch.com/2017/09/18/real-time-object-detection-with-deep-learning-a
 # import the necessary packages
-from imutils.video import VideoStream
-from imutils.video import FPS
+import sys
+
+sys.path.append(r"D:/Git/github/python-lib")
+
+from py_lib.func import (
+    log,
+    log_error,
+    sleep,
+    # read_file,
+    # write_file,
+    # format_json,
+    # loop_dir,
+)
+
 import numpy as np
 import argparse
 import imutils
@@ -130,12 +142,13 @@ def open_cam(cap):
         return False
 
 
-def start_cam():
+def start_cam(video=video_index):
     while True:
         try:
-            cap = cv2.VideoCapture(video_index)
+            log(f"open cam {video}")
+            cap = cv2.VideoCapture(video)
             success = open_cam(cap)
-            if not success:
+            if success:
                 break
             cap.release()
             cv2.destroyAllWindows()
@@ -144,4 +157,4 @@ def start_cam():
 
 
 if __name__ == "__main__":
-    start_cam()
+    start_cam(2)
