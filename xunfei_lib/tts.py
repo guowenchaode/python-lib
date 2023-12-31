@@ -153,7 +153,7 @@ class Ws_Param(object):
 
 
 class tts_speaker:
-    def __init__(self, text, pac_name="text"):
+    def __init__(self, text, pac_name="text", on_speak=None):
         self.wsParam = Ws_Param(
             APPID="5c38b07d",
             APISecret="6538336f03a7b4f896dad4af884f98f7",
@@ -164,6 +164,7 @@ class tts_speaker:
         websocket.enableTrace(False)
         dts = dt()
         self.pcm_file = f"{pcm_dir}/{pac_name}.{dts}.pcm"
+        self.on_speak = on_speak
 
     def on_message(self, ws, message):
         try:
@@ -182,6 +183,9 @@ class tts_speaker:
 
             if status == 2:
                 play_pcm(self.pcm_file)
+                if self.on_speak is not None:
+                    self.on_speak()
+
                 log("ws is closed")
                 ws.close()
         except Exception as e:
@@ -224,8 +228,8 @@ class tts_speaker:
         ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
 
 
-def speak(text, pac_name="test"):
-    tts = tts_speaker(text, pac_name)
+def speak(text, pac_name="tts", on_speak=None):
+    tts = tts_speaker(text, pac_name, on_speak)
     tts.speak()
 
 
@@ -292,7 +296,8 @@ if __name__ == "__main__":
         if args.action == "test":
             test(args.text)
         else:
-            speak(args.text)
+            text = "你好"
+            speak(text)
         ###########################################
         end = datetime.now()
         inter = end - start
