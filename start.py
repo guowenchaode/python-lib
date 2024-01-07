@@ -69,7 +69,7 @@ from threading import Thread
 # from work_note_lib.work_note import save_work_note
 from chrome_lib.chrome import get_last_history
 from date_lib.date_parser import start_plan_and_wait
-
+from ui_lib.message_window import show_message
 # from localtest_http_server_run import start_self_service
 
 
@@ -92,6 +92,9 @@ def start_threads(video_index=1, enable_cam=True, enable_plan=True):
         log("start plan thread")
         thread = Thread(target=start_plan_and_wait)
         thread.start()
+
+    t5 = Thread(target=show_message)
+    t5.start()
 
     # thread = Thread(target=start_server)
     # thread.start()

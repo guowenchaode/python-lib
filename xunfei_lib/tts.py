@@ -208,7 +208,7 @@ class tts_speaker:
                 "data": self.wsParam.Data,
             }
             d = json.dumps(d)
-            log("------>开始发送文本数据")
+            log(f"------>开始发送文本数据{d}")
             ws.send(d)
             if os.path.exists(self.pcm_file):
                 os.remove(self.pcm_file)

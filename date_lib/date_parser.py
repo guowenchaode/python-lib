@@ -82,7 +82,7 @@ def is_late_hour():
     now = datetime.now()
     hour = now.hour
     minute = now.minute
-    is_late = hour >= 22 or hour <= 5 or (hour == 6 and minute <= (60 - wait_time))
+    is_late = hour >= 22 or hour <= 5 or (hour == 6 and minute <= 59)
     return is_late
 
 

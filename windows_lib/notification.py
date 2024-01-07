@@ -48,13 +48,13 @@ def test(txt):
 """
 INPUT YOUR SCRIPT HERE
 """
-
+from ui_lib.message_window import update_message
 from plyer import notification
 
 
 def noti(message, title="Hi Alex"):
-    notification.notify(title=title, message=message, timeout=5)
-
+    if not update_message(message):
+        notification.notify(title=title, message=message, timeout=5)
 
 ########################################
 ########################################
