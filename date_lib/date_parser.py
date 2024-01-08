@@ -59,6 +59,7 @@ def test(txt):
 INPUT YOUR SCRIPT HERE
 """
 from xunfei_lib.tts import speak
+from ui_lib.message_window import update_message
 
 
 def parse_date_list_java(reg_list):
@@ -86,14 +87,22 @@ def is_late_hour():
     return is_late
 
 
+def update_plan_message(next_plan):
+    plan_detail = next_plan.get("detail/String")
+    date_time = next_plan.get("date")
+    delta = get_delta_time_by_str(date_time)
+    msg = f"请做好准备,{delta}后,{plan_detail}"
+    update_message(f"{msg}")
+
+
 def noti_next_plan(next_plan):
     plan_detail = next_plan.get("detail/String")
     date_time = next_plan.get("date")
     delta = get_delta_time_by_str(date_time)
     log(f"[下一计划]:{plan_detail}")
-
     msg = f"请做好准备,{delta}后,{plan_detail}"
     speak(msg)
+    update_plan_message(next_plan)
 
 
 def noti_current_plan(plan_list):
@@ -105,6 +114,7 @@ def noti_current_plan(plan_list):
         return
 
     msg = f"请注意,现在{plan_detail},{plan_detail}"
+    update_message(msg)
     speak(msg)
 
 
@@ -212,6 +222,7 @@ def start_plan():
         log(log_head * 3)
         log_plan(next_message, next_left_seconds)
         log(log_head * 3)
+        update_plan_message(next_plan)
         if last_alert_message != next_detail:
             noti_next_plan(next_plan)
             last_alert_message = next_detail

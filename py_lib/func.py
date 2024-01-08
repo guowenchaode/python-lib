@@ -11,6 +11,7 @@ import pandas as pd
 import sys
 import logging
 from threading import Thread
+
 KB = 1024
 MB = KB * 1024
 GB = MB * 1024
@@ -252,14 +253,16 @@ def dt():
     dt_str = d.strftime("%Y-%m-%d-%H.%M.%S")
     return dt_str
 
+
 def dtl():
     d = datetime.datetime.now()
     dt_str = d.strftime("%Y-%m-%d %H:%M:%S")
     return dt_str
 
+
 def read_file(path):
     try:
-        return open(path, "r").read()
+        return open(path, "r", encoding="utf-8").read()
     except:
         return ""
 
@@ -451,9 +454,7 @@ def get_delta_time(date_time):
     return date_time - datetime.datetime.now()
 
 
-
 def schedule(seconds, action):
-
     def run():
         time.sleep(seconds)
         if action is not None:

@@ -83,6 +83,9 @@ def run():
 
 
 def start_threads(video_index=1, enable_cam=True, enable_plan=True):
+    t5 = Thread(target=show_message)
+    t5.start()
+
     if enable_cam:
         log("start cam thread")
         thread = Thread(target=start_cam, args=(video_index,))
@@ -92,9 +95,6 @@ def start_threads(video_index=1, enable_cam=True, enable_plan=True):
         log("start plan thread")
         thread = Thread(target=start_plan_and_wait)
         thread.start()
-
-    t5 = Thread(target=show_message)
-    t5.start()
 
     # thread = Thread(target=start_server)
     # thread.start()
