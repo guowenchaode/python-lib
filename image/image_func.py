@@ -390,10 +390,10 @@ if __name__ == "__main__":
             )
         else:
             move_to_image_base_dir(
-                r"E:\内部存储\DCIM\Camera-bak",
+                r"F:\内部存储\DCIM\Camera",
                 r"X:\WD-BACKUP\Image",
                 True,
-                r"E:\内部存储\DCIM\Camera-bak-bak",
+                r"F:\内部存储\DCIM\Camera-bak",
             )
         ###########################################
         end = datetime.now()

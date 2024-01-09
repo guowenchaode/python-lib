@@ -62,6 +62,18 @@ from xunfei_lib.tts import speak
 from ui_lib.message_window import update_message
 
 
+current_dir = os.path.dirname(os.path.realpath(__file__))
+
+MESSAGE_FILE = f"{current_dir}/last-plan.localtest.txt"
+
+
+def load_last_plan():
+    return read_file(MESSAGE_FILE)
+
+
+def save_last_plan(message):
+    return write_file(MESSAGE_FILE, message, False)
+
 def parse_date_list_java(reg_list):
     command = f"java utils.function.DateParser {reg_list}"
     rs, e = execute(command)
@@ -136,7 +148,7 @@ def is_current_plan(left_seconds):
     return False
 
 
-last_alert_message = ""
+last_alert_message = load_last_plan()
 
 
 def start_plan():
@@ -226,6 +238,7 @@ def start_plan():
         if last_alert_message != next_detail:
             noti_next_plan(next_plan)
             last_alert_message = next_detail
+            save_last_plan(last_alert_message)
 
 
 def log_plan(msg, left_seconds):
