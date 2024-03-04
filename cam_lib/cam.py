@@ -58,7 +58,7 @@ net = cv2.dnn.readNetFromCaffe(prototxt, model)
 FRAME_WIDTH = 500
 LINE_COLOR = [255, 255, 255]
 LINE_HEIGHT = 20
-MAX_WORKING_SECONDS = 60 * 60  #1 HOUR
+MAX_WORKING_SECONDS = 60 * 60  # 1 HOUR
 
 # Load the Haar cascade file
 face_cascade = cv2.CascadeClassifier(
@@ -84,12 +84,17 @@ def wait_key(chr="q"):
 
 def process(frame):
     try:
+        frame = imutils.resize(frame, width=800)
         process_object(frame)
         process_face(frame)
         process_qr(frame)
-        process_hand(frame)
+        hands = process_hand(frame)
+
+        draw_objects(frame, hands)
     except:
         traceback.print_exc()
+    finally:
+        cv2.imshow("Video", frame)
 
 
 def process_face(frame):
@@ -102,7 +107,6 @@ def process_face(frame):
 
 
 def process_object(frame):
-    frame = imutils.resize(frame, width=800)
     (h, w) = frame.shape[:2]
     blob = cv2.dnn.blobFromImage(
         cv2.resize(frame, (300, 300)), 0.007843, (300, 300), 127.5
@@ -124,7 +128,6 @@ def process_object(frame):
                 object_name,
                 COLORS[idx],
             )
-    cv2.imshow("Video", frame)
 
 
 def show_rectangle(
@@ -140,16 +143,14 @@ def show_rectangle(
 
 def draw_object(blank_img, obj):
     (startX, startY, endX, endY, label) = obj
-    cv2.rectangle(blank_img, (startX, startY), (endX, endY), LINE_COLOR, 2)
-    y = startY - 15 if startY - 15 > 15 else startY + 15
-    cv2.putText(blank_img, label, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                LINE_COLOR, 1)
+    show_rectangle(blank_img, (startX, startY), (endX, endY), label)
 
 
 def draw_objects(blank_img, objs):
     for i in range(len(objs)):
         obj = objs[i]
         draw_object(blank_img, obj)
+
 
 def open_cam(cap):
     try:
