@@ -101,7 +101,7 @@ class message_window:
             "BW.TLabel",
             foreground="#f00",
             background="black",
-            width=500,
+            # width=500,
             font=("Times New Roman", self.font_size, ""),
         )
 

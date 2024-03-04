@@ -94,3 +94,5 @@ call pi  simpleai
 call pi  tk 
 call pi  tksheet 
 call pi  win10toast
+call pi cvzone
+call pi mediapipe

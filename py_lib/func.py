@@ -242,6 +242,10 @@ def get_copied():
     return data
 
 
+def now():
+    return datetime.datetime.now()
+
+
 def d():
     d = datetime.datetime.now()
     dt_str = d.strftime("%Y-%m-%d")
@@ -269,6 +273,11 @@ def read_file(path):
 
 def write_file(path, content, append=True):
     try:
+        dir = get_dir(path)
+
+        if not os.path.exists(dir):
+            mkdirs(dir)
+
         flg = "a" if append else "w"
         with open(path, flg, encoding="utf-8") as text_file:
             text_file.write(content)
@@ -277,8 +286,38 @@ def write_file(path, content, append=True):
         raise e
 
 
+def exe_script(file_path):
+    file_content = read_file(file_path)
+    log_block(file_content, file_path)
+    return exe_sh_output(file_content)
+
+
+def exe_sh_output(args):
+    log(f"[CALLING]{args}")
+    process = subprocess.Popen(
+        args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+
+
+def move_file(source, destination):
+    filename = os.path.basename(source)
+    dest = os.path.join(destination, filename)
+
+    if not os.path.exists(source):
+        log_error(f"[source-file-not-existed] [{source}]")
+        return
+
+    to_file = shutil.move(source, dest)
+    log(f"[move_file] [{to_file}]")
+    return to_file
+
+
 def log_error(l):
     log(l, WARNING)
+
+
+def log_success(l):
+    log(l, OKGREEN)
 
 
 def log(l=log_head, color=""):
@@ -462,3 +501,31 @@ def schedule(seconds, action):
 
     t1 = Thread(target=run)
     t1.start()
+
+
+def loop_sys_path_dir(
+    path_filter=lambda x: True,
+    process_file=lambda x: x,
+    process_dir=lambda x: x,
+    print_file=True,
+):
+    os_path = os.getenv("path")
+    path_list = os_path.split(";")
+    for path_dir in path_list:
+        is_ignored = path_dir == "" or not path_filter(path_dir)
+        if is_ignored:
+            continue
+        log(f"{path_dir}")
+        loop_dir(path_dir, process_file, process_dir, print_file)
+
+
+def get_file_name_without_ext(file_path):
+    return os.Path(file_path).stem
+
+
+def get_file_name(file_path):
+    return os.path.basename(file_path)
+
+
+def get_dir(file):
+    return os.path.dirname(os.path.abspath(file))

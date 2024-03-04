@@ -1,136 +1,262 @@
-# Example 8.1 segment.py
-# https://github.com/Gogul09/gesture-recognition/blob/master/segment.py
-# With minor modifications.
-# -------------------------------------------
-# SEGMENT HAND REGION FROM A VIDEO SEQUENCE
-# -------------------------------------------
+########################################
+# TOP #
+########################################
+############## TOP IMPORT FUNC #########
+import sys
 
-# organize imports
-import cv2
-import imutils
-import numpy as np
+sys.path.append(r"D:/Git/github/python-lib")
 
-# global variables
-bg = None
+from py_lib.func import (
+    log,
+    log_error,
+    log_success,
+    sleep,
+    read_file,
+    write_file,
+    format_json,
+    loop_dir,
+    now,
+    dtl,
+)
 
-# --------------------------------------------------
-# To find the running average over the background
-# --------------------------------------------------
+########################################
 
+import argparse
+import os
+import time
+import traceback
+from datetime import datetime
 
-def run_avg(image, aWeight):
-    global bg
-    # initialize the background
-    if bg is None:
-        bg = image.copy().astype("float")
-        return
-
-    # compute weighted average, accumulate it and update the background
-    cv2.accumulateWeighted(image, bg, aWeight)
-
-# ---------------------------------------------
-# To segment the region of hand in the image
-# ---------------------------------------------
+############### SAMPLE ################
+# time.sleep(1)
 
 
-def segment(image, threshold=25):
-    global bg
-    # find the absolute difference between background and current frame
-    diff = cv2.absdiff(bg.astype("uint8"), image)
-
-    # threshold the diff image so that we get the foreground
-    thresholded = cv2.threshold(diff, threshold, 255, cv2.THRESH_BINARY)[1]
-
-    # get the contours in the thresholded image
-    #(_, cnts, _) = cv2.findContours(thresholded.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    (cnts, _) = cv2.findContours(thresholded.copy(),
-                                 cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # return None, if no contours detected
-    if len(cnts) == 0:
-        return
-    else:
-        # based on contour area, get the maximum contour which is the hand
-        segmented = max(cnts, key=cv2.contourArea)
-        return (thresholded, segmented)
+########################################
+def build_arg_parser():
+    parser = argparse.ArgumentParser(description="Action")
+    parser.add_argument("--action", dest="action", required=False, help="action")
+    parser.add_argument("--text", dest="text", required=False, help="text")
+    args, left = parser.parse_known_args()
+    return args
 
 
-# -----------------
-# MAIN FUNCTION
-# -----------------
+def test(txt):
+    log(txt)
+
+
+########################################
+# BODY #
+########################################
+"""
+INPUT YOUR SCRIPT HERE
+"""
+
+import sys
+from action_lib.action import add_pending_trigger
+
+from cvzone.HandTrackingModule import HandDetector
+
+detector = HandDetector(
+    staticMode=False, maxHands=2, modelComplexity=1, detectionCon=0.5, minTrackCon=0.5
+)
+
+HAND_LEFT = "Left"
+HAND_RIGHT = "Right"
+
+CAM_HAND = "CAM-HAND"
+LEFT_HAND_CODE = ""
+RIGHT_HAND_CODE = ""
+
+LAST_LEFT_HAND_FINGER_COUNT = -1
+LAST_RIGHT_HAND_FINGER_COUNT = -1
+
+HAND_CODE = "Hand"
+
+MIN_EVENT_IN_SECOND = 1
+
+log_path = f"{__file__}.localtest.log"
+
+event_start_date = None
+event_end_date = None
+
+start_event = False
+
+
+def get_hand_detail(hand_info):
+    lmList1 = hand_info["lmList"]  # List of 21 landmarks for the first hand
+    bbox1 = hand_info[
+        "bbox"
+    ]  # Bounding box around the first hand (x,y,w,h coordinates)
+    center1 = hand_info["center"]  # Center coordinates of the first hand
+    handType1 = hand_info["type"]  # Type of the first hand ("Left" or "Right")
+
+    # Count the number of fingers up for the first hand
+    fingers1 = detector.fingersUp(hand_info)
+
+    finger_count = fingers1.count(1)
+    label = f"{handType1} Hand = {finger_count} Fingers"
+    log(label)
+    # event_message = f'{handType1}-{finger_count}'
+    # fire_event('CAM', 'HAND', event_message)
+
+    return (handType1, finger_count, bbox1)
+
+
+def parse_cam_info(hand_type, finger_count, bbox1):
+    global LEFT_HAND_CODE, RIGHT_HAND_CODE, event_start_date
+    label = f"{hand_type} Hand = {finger_count} Fingers"
+    (startX, startY, width, height) = bbox1
+
+    hand_code = LEFT_HAND_CODE if hand_type == HAND_LEFT else RIGHT_HAND_CODE
+
+    event_delta = get_event_delta(event_start_date)
+    label = f"{label} [{event_delta}s] [{hand_code}]"
+    return (startX, startY, startX + width, startY + height, label)
+
+
+def process_hand_event(hand_type, finger_count, bbox1):
+    global LEFT_HAND_CODE, RIGHT_HAND_CODE, LAST_LEFT_HAND_FINGER_COUNT, LAST_RIGHT_HAND_FINGER_COUNT
+
+    if hand_type == HAND_LEFT and LAST_LEFT_HAND_FINGER_COUNT != finger_count:
+        LEFT_HAND_CODE = f"{LEFT_HAND_CODE}{finger_count}"
+        LAST_LEFT_HAND_FINGER_COUNT = finger_count
+        log_success(f"LEFT_HAND_CODE: {LEFT_HAND_CODE}")
+
+    if hand_type == HAND_RIGHT and LAST_RIGHT_HAND_FINGER_COUNT != finger_count:
+        RIGHT_HAND_CODE = f"{RIGHT_HAND_CODE}{finger_count}"
+        LAST_RIGHT_HAND_FINGER_COUNT = finger_count
+        log_success(f"RIGHT_HAND_CODE: {RIGHT_HAND_CODE}")
+
+
+def process_hand_info(hand_info):
+    (hand_type, finger_count, bbox1) = get_hand_detail(hand_info)
+    process_hand_event(hand_type, finger_count, bbox1)
+    return parse_cam_info(hand_type, finger_count, bbox1)
+
+
+def reset():
+    global LEFT_HAND_CODE, RIGHT_HAND_CODE, LAST_LEFT_HAND_FINGER_COUNT, LAST_RIGHT_HAND_FINGER_COUNT, start_event, event_start_date, event_end_date
+    LEFT_HAND_CODE = ""
+    RIGHT_HAND_CODE = ""
+    LAST_LEFT_HAND_FINGER_COUNT = -1
+    LAST_RIGHT_HAND_FINGER_COUNT = -1
+    start_event = False
+    event_start_date = None
+    event_end_date = None
+
+
+def trigger_hand(hand_code):
+    msg = dtl() + ": " + hand_code + "\n"
+    write_file(log_path, msg)
+    add_pending_trigger(hand_code)
+
+
+def is_valid_date(event_start_date, event_end_date):
+    total_seconds = get_event_delta(event_start_date, event_end_date)
+    valid_date = total_seconds >= MIN_EVENT_IN_SECOND
+    return valid_date
+
+
+def get_event_delta(event_start_date, event_end_date=None):
+    if event_start_date is None:
+        return -1
+
+    if event_end_date is None:
+        event_end_date = now()
+
+    date_delta = event_end_date - event_start_date
+    total_seconds = date_delta.total_seconds()
+    return int(total_seconds)
+
+
+def fire_hand_event():
+    global LEFT_HAND_CODE, RIGHT_HAND_CODE, event_end_date, event_start_date
+    
+    try:
+        event_end_date = now()
+        valid_event = is_valid_date(event_start_date, event_end_date)
+
+        if not valid_event:
+            return
+
+        if LEFT_HAND_CODE == "" and RIGHT_HAND_CODE == "":
+            return
+
+        if RIGHT_HAND_CODE != "" and LEFT_HAND_CODE != "":
+            trigger_hand(
+                f"{HAND_CODE}-{HAND_LEFT}-{HAND_RIGHT}-{LEFT_HAND_CODE}-{RIGHT_HAND_CODE}"
+            )
+        elif LEFT_HAND_CODE != "":
+            trigger_hand(f"{HAND_CODE}-{HAND_LEFT}-{LEFT_HAND_CODE}")
+        elif RIGHT_HAND_CODE != "":
+            trigger_hand(f"{HAND_CODE}-{HAND_RIGHT}-{RIGHT_HAND_CODE}")
+
+    except Exception as e:
+            traceback.print_exc()
+    finally:
+        reset()
+
+
+
+def process_hand(frame):
+    global start_event, event_start_date
+
+    hands, img = detector.findHands(frame, draw=True, flipType=True)
+
+    have_hands = hands is not None and len(hands) > 0
+
+    # Check if any hands are detected
+    hand0 = None
+    hand1 = None
+
+    # if not start and no hands will return
+    if not start_event and not have_hands:
+        return []
+
+    # if have hands and not started will start event
+    elif not start_event and have_hands:
+        start_event = True
+        event_start_date = now()
+        log_success(f"start event: {event_start_date}")
+
+    elif start_event and not have_hands:
+        fire_hand_event()
+        return []
+
+    hand0 = process_hand_info(hands[0])
+
+    if len(hands) == 2:
+        hand1 = process_hand_info(hands[1])
+
+    if hand0 and hand1:
+        return [hand0, hand1]
+    elif hand0:
+        return [hand0]
+
+
+########################################
+########################################
+
+# BOTTOM #
+########################################
 if __name__ == "__main__":
-    # initialize weight for running average
-    aWeight = 0.5
-
-    # get the reference to the webcam
-    camera = cv2.VideoCapture(1)
-
-    # region of interest (ROI) coordinates
-    #top, right, bottom, left = 10, 350, 225, 590
-    top, right, bottom, left = 10, 10, 250, 300
-
-    # initialize num of frames
-    num_frames = 0
-
-    # keep looping, until interrupted
-    while (True):
-        # get the current frame
-        (grabbed, frame) = camera.read()
-
-        # resize the frame
-        frame = imutils.resize(frame, width=700)
-
-        # flip the frame so that it is not the mirror view
-        frame = cv2.flip(frame, 1)
-
-        # clone the frame
-        clone = frame.copy()
-
-        # get the height and width of the frame
-        (height, width) = frame.shape[:2]
-
-        # get the ROI
-        roi = frame[top:bottom, right:left]
-
-        # convert the roi to grayscale and blur it
-        gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (9, 9), 0)
-
-        # to get the background, keep looking till a threshold is reached
-        # so that our running average model gets calibrated
-        if num_frames < 30:
-            run_avg(gray, aWeight)
+    try:
+        start = datetime.now()
+        args = build_arg_parser()
+        log(f"__dir__: {__file__}")
+        log(f"### [start-try]: action=[{args.action}]")
+        ###########################################
+        if args.action == "test":
+            test(args.text)
         else:
-            # segment the hand region
-            hand = segment(gray)
-
-            # check whether hand region is segmented
-            if hand is not None:
-                # if yes, unpack the thresholded image and
-                # segmented region
-                (thresholded, segmented) = hand
-
-                # draw the segmented region and display the frame
-                cv2.drawContours(
-                    clone, [segmented + (right, top)], -1, (0, 0, 255))
-                cv2.imshow("Thesholded", thresholded)
-
-        # draw the segmented hand
-        cv2.rectangle(clone, (left, top), (right, bottom), (0, 255, 0), 2)
-
-        # increment the number of frames
-        num_frames += 1
-
-        # display the frame with segmented hand
-        cv2.imshow("Video Feed", clone)
-
-        # observe the keypress by the user
-        keypress = cv2.waitKey(1) & 0xFF
-
-        # if the user pressed "q", then stop looping
-        if keypress == ord("q"):
-            break
-
-# free up memory
-camera.release()
-cv2.destroyAllWindows()
+            test(args.text)
+        ###########################################
+        end = datetime.now()
+        inter = end - start
+        log(f"### [end-try]: [{inter}]")
+    except:
+        traceback.print_exc()
+    finally:
+        fine = datetime.now()
+        inter = fine - start
+        log(f"### [finally]: [{inter}]")

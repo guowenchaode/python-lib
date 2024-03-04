@@ -22,6 +22,7 @@ import imutils
 import time
 import cv2
 from cam_lib.cam_qr import process_qr
+from cam_lib.cam_hand import process_hand
 import traceback
 
 prototxt = r"D:\Git\github\python-lib\data\MobileNetSSD_deploy.prototxt"
@@ -53,6 +54,12 @@ CLASSES = [
 COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 net = cv2.dnn.readNetFromCaffe(prototxt, model)
 
+
+FRAME_WIDTH = 500
+LINE_COLOR = [255, 255, 255]
+LINE_HEIGHT = 20
+MAX_WORKING_SECONDS = 60 * 60  #1 HOUR
+
 # Load the Haar cascade file
 face_cascade = cv2.CascadeClassifier(
     r"D:\Git\github\python-lib\data\haar_cascade_files\haarcascade_frontalface_default.xml"
@@ -80,6 +87,7 @@ def process(frame):
         process_object(frame)
         process_face(frame)
         process_qr(frame)
+        process_hand(frame)
     except:
         traceback.print_exc()
 
@@ -130,6 +138,19 @@ def show_rectangle(
     )
 
 
+def draw_object(blank_img, obj):
+    (startX, startY, endX, endY, label) = obj
+    cv2.rectangle(blank_img, (startX, startY), (endX, endY), LINE_COLOR, 2)
+    y = startY - 15 if startY - 15 > 15 else startY + 15
+    cv2.putText(blank_img, label, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                LINE_COLOR, 1)
+
+
+def draw_objects(blank_img, objs):
+    for i in range(len(objs)):
+        obj = objs[i]
+        draw_object(blank_img, obj)
+
 def open_cam(cap):
     try:
         while True:
@@ -157,4 +178,4 @@ def start_cam(video=video_index):
 
 
 if __name__ == "__main__":
-    start_cam(2)
+    start_cam(1)

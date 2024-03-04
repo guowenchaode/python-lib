@@ -148,7 +148,7 @@ def is_current_plan(left_seconds):
     return False
 
 
-last_alert_message = load_last_plan()
+last_alert_message = ''
 
 
 def start_plan():
