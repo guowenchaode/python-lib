@@ -529,3 +529,64 @@ def get_file_name(file_path):
 
 def get_dir(file):
     return os.path.dirname(os.path.abspath(file))
+
+
+def log_event(type, value=""):
+    date_time = date_time_as_log()
+    date_path = date_as_file()
+    file_path = f"D:/__Share/tree/data/event/.log/{date_path}.log"
+
+    txt = f"{date_time}:\t[{type}]\t[{value}]\n"
+    write_file(file_path, txt)
+
+
+def date_as_file(date=None):
+    return format_date(date, "%Y-%m-%d")
+
+
+def date_time_as_log(date=None):
+    return format_date(date, "%Y/%m/%d %H:%M:%S")
+
+
+def date_time_as_file(date=None):
+    return format_date(date, "%Y-%m-%d_%H.%M.%S")
+
+
+def time_as_file(date=None):
+    return format_date(date, "%H.%M.%S")
+
+
+def format_date(date, fmt):
+    return _date(date).strftime(fmt)
+
+
+def _date(date):
+    return now() if date is None else date
+
+
+def date_as_log(date=None):
+    return format_date(date, "%Y/%m/%d")
+
+
+def date_as_file(date=None):
+    return format_date(date, "%Y-%m-%d")
+
+
+def date_time_as_log(date=None):
+    return format_date(date, "%Y/%m/%d %H:%M:%S")
+
+
+def date_time_as_file(date=None):
+    return format_date(date, "%Y-%m-%d_%H.%M.%S")
+
+
+def time_as_file(date=None):
+    return format_date(date, "%H.%M.%S")
+
+
+def format_date(date, fmt):
+    return _date(date).strftime(fmt)
+
+
+def format_delta_date(interval):
+    return str(interval).split(".")[0].replace(":", ".")

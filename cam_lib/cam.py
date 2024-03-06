@@ -24,6 +24,7 @@ import cv2
 from cam_lib.cam_qr import process_qr
 from cam_lib.cam_hand import process_hand
 import traceback
+from event_lib.person_event import update_person
 
 prototxt = r"D:\Git\github\python-lib\data\MobileNetSSD_deploy.prototxt"
 model = r"D:\Git\github\python-lib\data\MobileNetSSD_deploy.caffemodel"
@@ -106,13 +107,20 @@ def process_face(frame):
         show_rectangle(frame, (x, y), (x + w, y + h), "face")
 
 
+last_object_names = ""
+
+
 def process_object(frame):
+    global last_object_names
+
     (h, w) = frame.shape[:2]
     blob = cv2.dnn.blobFromImage(
         cv2.resize(frame, (300, 300)), 0.007843, (300, 300), 127.5
     )
     net.setInput(blob)
     detections = net.forward()
+
+    object_names = ""
     for i in np.arange(0, detections.shape[2]):
         conf = detections[0, 0, i, 2]
         if conf > confidence:
@@ -120,14 +128,23 @@ def process_object(frame):
             box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
             (startX, startY, endX, endY) = box.astype("int")
 
-            object_name = "{}: {:.2f}%".format(CLASSES[idx], conf * 100)
+            object_name = CLASSES[idx]
+            label = "{}: {:.2f}%".format(object_name, conf * 100)
             show_rectangle(
                 frame,
                 (startX, startY),
                 (endX, endY),
-                object_name,
+                label,
                 COLORS[idx],
             )
+
+            if object_name == "person":
+                update_person()
+
+            object_names = f"{object_names}-{object_name}"
+    if object_names != last_object_names and object_names != "":
+        log_error(f"[objects]{object_names}")
+        last_object_names = object_names
 
 
 def show_rectangle(
