@@ -54,7 +54,14 @@ EVENT_NAME = "CAM/PERSON"
 stop_interval_seconds = 60 * 2
 run_interval_seconds = 60 * 20
 on_stop = lambda inter: noti(f"Leave: {inter}")
-on_run = lambda inter: noti(f"Start: {inter}")
+# on_run = lambda inter:
+
+# max_working_seconds=
+
+def on_run(inter):
+    total_seconds = inter.total_seconds()
+    # noti(f"Start: {inter}")
+
 
 timer = EventTimer(
     name=EVENT_NAME,
