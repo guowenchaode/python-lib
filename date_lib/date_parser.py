@@ -20,6 +20,7 @@ from py_lib.func import (
     OKGREEN,
     loop_dir,
     to_json,
+    copy_file,
     to_date_time,
     to_dict_list,
     execute,
@@ -88,7 +89,8 @@ def parse_date(reg):
     return dt
 
 
-dict_list = r"D:\Share\plan.csv"
+plan_file = r"D:\Share\plan.csv"
+dict_list_bak = r"D:\Share\plan.csv.bak"
 
 
 def is_late_hour():
@@ -154,7 +156,9 @@ last_alert_message = ''
 def start_plan():
     global last_alert_message
 
-    plan_list = to_dict_list(dict_list)
+
+
+    plan_list = to_dict_list(plan_file)
     date_exp_list = [plan.get("dateExp/String") for plan in plan_list]
     date_list_info = parse_date_list_java(" ".join(date_exp_list))
     date_time_list = date_list_info.get("planInfos")
@@ -210,7 +214,8 @@ def start_plan():
 
             is_current = is_current_plan(left_seconds)
             delta = get_delta_time_by_str(date_time)
-            msg = f"[{i}] [{left_seconds}] => [{delta}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
+            msg = f"[{i}]\t[{date_time}]\t[{delta}]\t\t==> {plan_detail}"
+            # msg = f"[{i}] [{left_seconds}] => [{delta}] => [{date_time}] => [{plan_exp}] =>  {plan_detail}"
 
             if left_seconds > 0 and next_plan is None:
                 next_plan = plan
@@ -236,6 +241,8 @@ def start_plan():
         log(log_head * 3)
         update_plan_message(next_plan)
         if last_alert_message != next_detail:
+            log_error(f"[plan-updated] [{last_alert_message}] != [{next_detail}] ")
+            log(log_head * 3)
             noti_next_plan(next_plan)
             last_alert_message = next_detail
             save_last_plan(last_alert_message)
@@ -262,6 +269,7 @@ def start_plan_and_wait():
         except:
             pass
         finally:
+            copy_file(plan_file, f"{plan_file}.bak")
             send_heart_beat()
             log(f"wait {wait_time} seconds")
             sleep(wait_time)
