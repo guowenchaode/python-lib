@@ -1,6 +1,5 @@
 import re
 import json
-import requests
 import exifread
 import os.path
 import time
@@ -67,10 +66,11 @@ def load_image(pic_path):
             #     GPS['GPSAltitude'] = str(value)
             if re.match('.*Date.*', tag):
                 date = str(value)
+                print(f'Image Date:{date}')
         if date == '':
             lt = os.path.getmtime(pic_path)
             date = float_to_time(lt)
-    print(f'Image Date:{date}')
+            print(f'Image File Date:{date}')
     return {'gps_info': GPS, 'date_info': date}
 
 
@@ -101,7 +101,7 @@ def find_address_from_GPS(GPS):
 
 
 if __name__ == '__main__':
-    path = r"F:\phone\HW\DCIM\Camera\IMG_20141018_155859.jpg"   # 图片存放路径
+    path = r"E:\内部存储\Pictures\WeiXin\mmexport1724946709544.jpg"   # 图片存放路径
     GPS_info = load_image(pic_path=path)
     # address = find_address_from_GPS(GPS=GPS_info)
     print("拍摄时间：" + GPS_info.get("date_information"))

@@ -298,6 +298,14 @@ def exe_sh_output(args):
         args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
 
+def copy_file(source, destination):
+    if not os.path.exists(source):
+        log_error(f"[source-file-not-existed] [{source}]")
+        return
+
+    to_file = shutil.copyfile(source, destination)
+    log(f"[copy_file] [{to_file}]")
+    return to_file
 
 def move_file(source, destination):
     filename = os.path.basename(source)
@@ -452,6 +460,7 @@ def to_dict_list(pth):
         return json.loads(json_data)
     except:
         return None
+    
 
 
 def to_date_time(date_str, reg="%Y/%m/%d %H:%M:%S"):
@@ -480,10 +489,9 @@ def get_delta_time_by_str(date_time_str):
     result = ""
     if "," in delta:
         (days, times) = delta.split(", ")
-        d = days.replace(" days", "")
+        d = days.replace(" days", "").replace(" day", "")
         time_delta = parse_delta_time(times)
         result = f",{d}天{time_delta}".replace(",0天", "")
-
     else:
         result = parse_delta_time(delta)
     return result.replace(",", "")

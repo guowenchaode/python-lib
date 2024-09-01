@@ -146,10 +146,10 @@ def load_and_move_file(path, root="X:\WD-PHONE\Image", copy=False):
     new_image_name = "IMG_" + date_info.replace(":", "").replace(" ", "_") + ".jpg"
 
     new_image_path = f"{new_dir}/{new_image_name}"
-    log(f"New Image Name:{new_image_path}")
+    log(f"[load_and_move_file] New Image Name:{new_image_path}")
 
-    if os.path.exists(new_image_name):
-        log("Existes")
+    if os.path.exists(new_image_path):
+        log("Target Exists")
         return
 
     if copy:
@@ -172,7 +172,7 @@ def get_date_from_img(file_name):
 
 
 def is_img(file_name):
-    return ".jpg" in file_name.lower() or ".png" in file_name.lower()
+    return  ".jpeg" in file_name.lower() or ".jpg" in file_name.lower() or ".png" in file_name.lower()
 
 
 def is_video(file_name):
@@ -211,21 +211,21 @@ def move_img(path, file_name, root, copy, backup_dir):
             os.makedirs(new_image_dir)
 
         new_image_path = f"{new_image_dir}/{file_name}"
-        log(f"New Image Name:{new_image_path}")
+        exists = os.path.exists(new_image_path)
+        log(f"[move_img] New Image Name:{new_image_path} exists={exists}")
 
-        if os.path.exists(new_image_path):
-            log("Existes")
-            move_file(path, backup_dir)
-            return
-
-        if copy:
-            copy_file(path, new_image_dir)
+        if exists:
+            log("Target Existes")
             move_file(path, backup_dir)
         else:
-            move_file(path, new_image_dir)
+            if copy:
+                copy_file(path, new_image_dir)
+            else:
+                move_file(path, new_image_dir)
     else:
         load_and_move_file(path, root, copy)
 
+    move_file(path, backup_dir)
 
 def move_vid(path, file_name, root, copy, backup_dir):
     date_info, date = load_date(path)
@@ -244,7 +244,7 @@ def move_vid(path, file_name, root, copy, backup_dir):
     if os.path.exists(new_image_path):
         if not os.path.exists(dup_image_dir):
             os.makedirs(dup_image_dir)
-        log("Existes")
+        log("Target Existes")
         move_file(path, dup_image_dir)
         return
 
@@ -389,11 +389,14 @@ if __name__ == "__main__":
                 args.source_dir, args.target_dir, True, args.backup_dir
             )
         else:
+            source = r"E:\内部存储\DCIM\Camera"
+            source = r"E:\内部存储\Pictures\WeiXin"
+            target = r"F:\Image"
             move_to_image_base_dir(
-                r"F:\内部存储\DCIM\Camera",
-                r"X:\WD-BACKUP\Image",
+                source,
+                target,
                 True,
-                r"F:\内部存储\DCIM\Camera-bak",
+                f"{source}-bak",
             )
         ###########################################
         end = datetime.now()

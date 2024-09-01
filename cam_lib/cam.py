@@ -176,6 +176,7 @@ def open_cam(cap):
             process(frame)
             if wait_key():
                 return True
+            time.sleep(1)
     except:
         traceback.print_exc()
         return False

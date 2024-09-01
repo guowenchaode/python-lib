@@ -266,10 +266,10 @@ def start_plan_and_wait():
                 log_error("is late hour")
             else:
                 start_plan()
+                copy_file(plan_file, f"{plan_file}.bak")
         except:
             pass
         finally:
-            copy_file(plan_file, f"{plan_file}.bak")
             send_heart_beat()
             log(f"wait {wait_time} seconds")
             sleep(wait_time)
