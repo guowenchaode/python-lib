@@ -79,7 +79,7 @@ def create_tk(x, y):
 # infinite loop
 class message_window:
     # def __init__(self, x=-955, y=1080, font_size=30):
-    def __init__(self, x=0, y=0, font_size=20):
+    def __init__(self, x=0, y=0, font_size=10):
         self.l1 = ""
         self.time = dt()
         self.message = load_message()

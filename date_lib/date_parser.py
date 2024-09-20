@@ -269,11 +269,11 @@ def log_plan(msg, left_seconds):
 def start_plan_and_wait():
     while True:
         try:
-            if is_late_hour():
-                log_error("is late hour")
-            else:
-                start_plan()
-                copy_file(plan_file, f"{plan_file}.bak")
+            # if is_late_hour():
+            #     log_error("is late hour")
+            # else:
+            start_plan()
+            copy_file(plan_file, f"{plan_file}.bak")
         except:
             pass
         finally:
