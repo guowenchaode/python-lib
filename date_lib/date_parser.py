@@ -75,6 +75,7 @@ def load_last_plan():
 def save_last_plan(message):
     return write_file(MESSAGE_FILE, message, False)
 
+
 def parse_date_list_java(reg_list):
     command = f"java utils.function.DateParser {reg_list}"
     rs, e = execute(command)
@@ -101,6 +102,14 @@ def is_late_hour():
     return is_late
 
 
+def speak_message(msg):
+    if is_late_hour():
+        log(f"[plan]:is late hour")
+        return
+
+    speak(msg)
+
+
 def update_plan_message(next_plan):
     plan_detail = next_plan.get("detail/String")
     date_time = next_plan.get("date")
@@ -115,7 +124,7 @@ def noti_next_plan(next_plan):
     delta = get_delta_time_by_str(date_time)
     log(f"[下一计划]:{plan_detail}")
     msg = f"请做好准备,{delta}后,{plan_detail}"
-    speak(msg)
+    speak_message(msg)
     update_plan_message(next_plan)
 
 
@@ -129,7 +138,7 @@ def noti_current_plan(plan_list):
 
     msg = f"请注意,现在{plan_detail},{plan_detail}"
     update_message(msg)
-    speak(msg)
+    speak_message(msg)
 
 
 wait_time = 30
@@ -150,13 +159,11 @@ def is_current_plan(left_seconds):
     return False
 
 
-last_alert_message = ''
+last_alert_message = ""
 
 
 def start_plan():
     global last_alert_message
-
-
 
     plan_list = to_dict_list(plan_file)
     date_exp_list = [plan.get("dateExp/String") for plan in plan_list]
@@ -270,7 +277,7 @@ def start_plan_and_wait():
         except:
             pass
         finally:
-            send_heart_beat()
+            # send_heart_beat()
             log(f"wait {wait_time} seconds")
             sleep(wait_time)
 
