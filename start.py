@@ -159,7 +159,7 @@ if __name__ == "__main__":
             main(int(args.video_index), bool(args.enable_plan), bool(args.enable_video))
         else:
             # test(args.text)
-            main(int(0), bool("True"), bool("True"))
+            main(int(1), bool("True"), bool("True"))
         ###########################################
         end = datetime.now()
         inter = end - start

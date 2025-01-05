@@ -61,6 +61,10 @@ LINE_COLOR = [255, 255, 255]
 LINE_HEIGHT = 20
 MAX_WORKING_SECONDS = 60 * 60  # 1 HOUR
 
+black_image = np.zeros(
+    (FRAME_WIDTH, FRAME_WIDTH, 3), dtype=np.uint8
+)  # 创建一个黑色图像
+
 # Load the Haar cascade file
 face_cascade = cv2.CascadeClassifier(
     r"D:\Git\github\python-lib\data\haar_cascade_files\haarcascade_frontalface_default.xml"
@@ -84,33 +88,35 @@ def wait_key(chr="q"):
 
 
 def process(frame):
+    global black_image
     try:
-        frame = imutils.resize(frame, width=800)
-        process_object(frame)
-        process_face(frame)
+        frame = imutils.resize(frame, width=FRAME_WIDTH)
+        black_image = np.zeros((FRAME_WIDTH, FRAME_WIDTH, 3), dtype=np.uint8)
+        process_object(frame, black_image)
+        process_face(frame, black_image)
         process_qr(frame)
-        hands = process_hand(frame)
+        hands = process_hand(frame, black_image)
 
         draw_objects(frame, hands)
     except:
         traceback.print_exc()
     finally:
-        cv2.imshow("Video", frame)
+        cv2.imshow("Video", black_image)
 
 
-def process_face(frame):
+def process_face(frame, black_image):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     face_rects = face_cascade.detectMultiScale(gray, 1.3, 5)
 
     # Draw a rectangle around the face
     for x, y, w, h in face_rects:
-        show_rectangle(frame, (x, y), (x + w, y + h), "face")
+        show_rectangle(black_image, (x, y), (x + w, y + h), "face")
 
 
 last_object_names = ""
 
 
-def process_object(frame):
+def process_object(frame, black_image):
     global last_object_names
 
     (h, w) = frame.shape[:2]
@@ -131,7 +137,7 @@ def process_object(frame):
             object_name = CLASSES[idx]
             label = "{}: {:.2f}%".format(object_name, conf * 100)
             show_rectangle(
-                frame,
+                black_image,
                 (startX, startY),
                 (endX, endY),
                 label,
@@ -150,6 +156,7 @@ def process_object(frame):
 def show_rectangle(
     frame, start_point, end_point, label="", color=(0, 255, 0), font_size=2
 ):
+    global black_image
     (startX, startY) = start_point
     cv2.rectangle(frame, start_point, end_point, color, font_size)
     y = startY - 15 if startY - 15 > 15 else startY + 15
@@ -176,7 +183,7 @@ def open_cam(cap):
             process(frame)
             if wait_key():
                 return True
-            time.sleep(1)
+            time.sleep(0.3)
     except:
         traceback.print_exc()
         return False

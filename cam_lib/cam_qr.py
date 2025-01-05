@@ -47,7 +47,7 @@ LOG_PATH = r"D:/__cache/qr_code/input.log"
 last_data = ""
 
 
-def process_qr(cam_frame, black_image):
+def process_qr(cam_frame):
     global last_data
     # detect and decode
     detector = cv2.QRCodeDetector()
