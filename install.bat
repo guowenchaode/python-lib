@@ -8,11 +8,18 @@ call pi SpeechRecognition
 call pi auto-py-to-exe
 call pi automl
 call pi beautifulsoup4
-call pi chatterbot,
+call pi chatterbot
+call pi imutils
 call pi chatterbot_corpus
 call pi deepface
 call pi dlib
+call pi selenium
+call pi plyer
+call pi import webbrowser
+call pi pywin32
 call pi dnspython
+call pi chrome_bookmarks
+call pi pyinstaller
 call pi face-recognition
 call pi feedparser
 call pi flask

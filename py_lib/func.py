@@ -1,13 +1,13 @@
 import os
 import shutil
 import datetime
-import requests
 import win32clipboard
 import traceback
 import json
 import time
-import subprocess
 import pandas as pd
+import requests
+import subprocess
 import sys
 import logging
 from threading import Thread

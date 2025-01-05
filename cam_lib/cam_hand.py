@@ -198,7 +198,7 @@ def fire_hand_event():
 
 
 
-def process_hand(frame):
+def process_hand(frame, black_image):
     global start_event, event_start_date
 
     hands, img = detector.findHands(frame, draw=True, flipType=True)
