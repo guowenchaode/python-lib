@@ -1,14 +1,14 @@
 import sys
 
 sys.path.append(
-    r'C:\Users\e531866\Desktop\_GUOZHENG\git\repository\python-lib')
+    r'D:\\Users\e531866\Desktop\_GUOZHENG\git\repository\python-lib')
 
 import cv2
 from py_lib.func import log, now
 # from windows.notification import noti
 # from event_lib.person_event import update_person
 
-path_haar_face = r'C:\Users\e531866\Desktop\_GUOZHENG\git\repository\python-lib\haar\haarcascade_frontalface_default.xml'
+path_haar_face = r'D:\\Users\e531866\Desktop\_GUOZHENG\git\repository\python-lib\haar\haarcascade_frontalface_default.xml'
 
 
 def putText(cam_frame, text, x, y):

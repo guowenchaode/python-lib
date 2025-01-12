@@ -37,7 +37,7 @@ JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN")
 
 jira_host = "https://statestreet-cloud.atlassian.net/browse"
 
-DIR_CACHE = r"C:\Users\e531866\Desktop\_GUOZHENG\git\repository\alex_in_ssc\service_in_ssc\ui\cache"
+DIR_CACHE = r"D:\\Users\e531866\Desktop\_GUOZHENG\git\repository\alex_in_ssc\service_in_ssc\ui\cache"
 sep = "-" * 50
 
 
@@ -264,6 +264,13 @@ def dtl():
     return dt_str
 
 
+def seconds_to_hms(seconds):
+    seconds = int(f"{seconds}", 10)
+    hours, remainder = divmod(seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02}:{minutes:02}:{seconds:02}"
+
+
 def read_file(path):
     try:
         return open(path, "r", encoding="utf-8").read()
@@ -298,6 +305,7 @@ def exe_sh_output(args):
         args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
 
+
 def copy_file(source, destination):
     if not os.path.exists(source):
         log_error(f"[source-file-not-existed] [{source}]")
@@ -306,6 +314,7 @@ def copy_file(source, destination):
     to_file = shutil.copyfile(source, destination)
     log(f"[copy_file] [{to_file}]")
     return to_file
+
 
 def move_file(source, destination):
     filename = os.path.basename(source)
@@ -460,7 +469,6 @@ def to_dict_list(pth):
         return json.loads(json_data)
     except:
         return None
-    
 
 
 def to_date_time(date_str, reg="%Y/%m/%d %H:%M:%S"):

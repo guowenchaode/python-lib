@@ -44,7 +44,7 @@ import sqlite3
 import subprocess
 
 CHROME_HISTORY_PATH = (
-    r"C:\Users\Alex\AppData\Local\Google\Chrome\User Data\Default\History"
+    r"D:\\Users\Alex\AppData\Local\Google\Chrome\User Data\Default\History"
 )
 
 

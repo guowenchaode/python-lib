@@ -72,7 +72,7 @@ class EventTimer:
 
     def save(self, type, value):
         name = format_file_name(value)
-        path = f"C:/Users/e531866/Desktop/_GUOZHENG/tree/data/event/{self.name}/{type}/{name}"
+        path = f"D:\/Users/e531866/Desktop/_GUOZHENG/tree/data/event/{self.name}/{type}/{name}"
         os.makedirs(path)
 
     def save_stop(self, interval):
@@ -80,7 +80,7 @@ class EventTimer:
         time_path = time_as_file()
         interval = format_delta_date(interval)
         self.log(f"STOP", interval)
-        path = f"C:/Users/e531866/Desktop/_GUOZHENG/tree/data/event/{self.name}/STOP/{date_path}/{time_path}-{interval}"
+        path = f"D:\/Users/e531866/Desktop/_GUOZHENG/tree/data/event/{self.name}/STOP/{date_path}/{time_path}-{interval}"
         os.makedirs(path)
 
     def save_run(self, interval):
@@ -88,7 +88,7 @@ class EventTimer:
         time_path = time_as_file()
         interval = format_delta_date(interval)
         self.log(f"RUN", interval)
-        path = f"C:/Users/e531866/Desktop/_GUOZHENG/tree/data/event/{self.name}/RUN/{date_path}/{time_path}-{interval}"
+        path = f"D:\/Users/e531866/Desktop/_GUOZHENG/tree/data/event/{self.name}/RUN/{date_path}/{time_path}-{interval}"
         os.makedirs(path)
 
     def log(self, type, value):

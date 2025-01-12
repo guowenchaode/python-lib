@@ -10,8 +10,11 @@ from py_lib.func import (
     log,
     log_error,
     sleep,
+    seconds_to_hms,
     # read_file,
-    # write_file,
+    write_file,
+    dtl,
+    d,
     # format_json,
     # loop_dir,
 )
@@ -24,7 +27,8 @@ import cv2
 from cam_lib.cam_qr import process_qr
 from cam_lib.cam_hand import process_hand
 import traceback
-from event_lib.person_event import update_person
+from event_lib.person_event import update_person, timer
+from audio.speaker import speak
 
 prototxt = r"D:\Git\github\python-lib\data\MobileNetSSD_deploy.prototxt"
 model = r"D:\Git\github\python-lib\data\MobileNetSSD_deploy.caffemodel"
@@ -75,6 +79,7 @@ if face_cascade.empty():
     raise IOError("Unable to load the face cascade classifier xml file")
 
 video_index = 1
+total_person = ""
 
 
 def read_frame(cap):
@@ -87,8 +92,12 @@ def wait_key(chr="q"):
     return key == ord(chr)
 
 
+IMAGE_PATH = r"D:\Share\cam\cam1.png"
+last_message = ""
+
+
 def process(frame):
-    global black_image
+    global black_image, total_person, last_message
     try:
         frame = imutils.resize(frame, width=FRAME_WIDTH)
         black_image = np.zeros((FRAME_WIDTH, FRAME_WIDTH, 3), dtype=np.uint8)
@@ -98,6 +107,23 @@ def process(frame):
         hands = process_hand(frame, black_image)
 
         draw_objects(frame, hands)
+
+        total_person = seconds_to_hms(timer.total_run_seconds)
+
+        msg = f"Person: {total_person}"
+        show_text(black_image, msg)
+
+        if timer.total_run_seconds == 60 * 60:
+            alert_message = "已经学习一小时，去休息一下"
+            speak(alert_message)
+
+        # cv2.imwrite(IMAGE_PATH, frame)
+        if timer.total_run_seconds > 0 and last_message != msg:
+            last_message = msg
+            today = d()
+            n = dtl()
+            SHARE_LOG_PATH = f"D:/Share/cam/{today}.log"
+            write_file(SHARE_LOG_PATH, f"\n{n}: {msg}")
     except:
         traceback.print_exc()
     finally:
@@ -153,6 +179,10 @@ def process_object(frame, black_image):
         last_object_names = object_names
 
 
+def show_text(frame, label, x=0, y=20, color=(0, 255, 0), font_size=2):
+    cv2.putText(frame, label, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, font_size)
+
+
 def show_rectangle(
     frame, start_point, end_point, label="", color=(0, 255, 0), font_size=2
 ):
@@ -160,9 +190,7 @@ def show_rectangle(
     (startX, startY) = start_point
     cv2.rectangle(frame, start_point, end_point, color, font_size)
     y = startY - 15 if startY - 15 > 15 else startY + 15
-    cv2.putText(
-        frame, label, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, font_size
-    )
+    show_text(frame, label, startX, y)
 
 
 def draw_object(blank_img, obj):
