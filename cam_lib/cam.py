@@ -127,6 +127,7 @@ def process(frame):
     except:
         traceback.print_exc()
     finally:
+        # cv2.namedWindow('Window with Menu', cv2.WINDOW_GUI_NORMAL)
         cv2.imshow("Video", black_image)
 
 

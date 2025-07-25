@@ -179,6 +179,20 @@ def move_to_dir(dir, dir_root, target_root, copy=False):
         except Exception as e:
             print(e)
 
+def excel_to_df(file_path, sheet_name=0, header=0):
+    """
+    Reads an Excel file and returns a pandas DataFrame.
+    :param file_path: Path to the Excel file.
+    :param sheet_name: Sheet name or index, default is 0 (first sheet).
+    :param header: Row to use as column names, default is 0.
+    :return: pandas.DataFrame
+    """
+    try:
+        df = pd.read_excel(file_path, sheet_name=sheet_name, header=header)
+        return df
+    except Exception as e:
+        log_error(f"Failed to read Excel file: {file_path}, error: {e}")
+        return None
 
 def clear_empty_dir(dir):
     try:
