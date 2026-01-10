@@ -1,0 +1,1 @@
+call python -u D:\Git\github\python-lib\game_lib\gamer.py
