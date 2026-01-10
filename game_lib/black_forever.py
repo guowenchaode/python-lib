@@ -7,6 +7,7 @@ import pyautogui
 import csv
 import os
 import sys
+from datetime import datetime
 
 # 设置pyautogui防故障（避免鼠标移到屏幕边缘报错）
 pyautogui.FAILSAFE = False
@@ -68,8 +69,9 @@ class DiabloWindowMonitor:
         self.script_thread = None          # 脚本执行线程
         self.script_current_index = 0      # 脚本当前执行位置
         self.script_loop = True            # 是否循环执行脚本
-        self.loop_interval = 60             # 循环间隔时间（默认60秒）
-        self.stop_on_background = False     # 主程序后台时自动停止脚本（默认开启）
+        self.loop_interval = 5             # 循环间隔时间（默认5秒）
+        self.stop_on_background = True     # 主程序后台时自动停止脚本（默认开启）
+        self.script_file_path = ""         # 当前加载的脚本文件路径
         
         # 气泡相关变量
         self.bubble_windows = []           # 气泡窗口列表
@@ -101,7 +103,7 @@ class DiabloWindowMonitor:
         
         title_label = ttk.Label(
             title_frame, 
-            text="暗黑破坏神窗口监控工具 | 千分比坐标版 | 停止显全部气泡/运行显下一个命令 | 表格自动滚动", 
+            text="暗黑破坏神窗口监控工具 | 千分比坐标版 | 停止显全部气泡/运行显下一个命令 | 表格自动滚动 | 执行结束自动截图", 
             font=("微软雅黑", 14, "bold")
         )
         title_label.pack(side=tk.LEFT)
@@ -276,6 +278,51 @@ class DiabloWindowMonitor:
         self.stop_btn = ttk.Button(exit_frame, text="停止监控", command=self._stop_monitor)
         self.stop_btn.pack()
 
+    def _capture_main_window_screenshot(self):
+        """对主程序窗口截图并保存到脚本目录的cache文件夹"""
+        if not self.main_diablo_window or not self.script_file_path:
+            return
+        
+        try:
+            # 获取脚本文件所在目录
+            script_dir = os.path.dirname(os.path.abspath(self.script_file_path))
+            # 创建cache文件夹路径
+            cache_dir = os.path.join(script_dir, "cache")
+            
+            # 如果cache文件夹不存在则创建
+            if not os.path.exists(cache_dir):
+                os.makedirs(cache_dir)
+            
+            # 生成按日期时间命名的文件名（格式：YYYYMMDD_HHMMSS.png）
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            screenshot_filename = f"script_screenshot_{timestamp}.png"
+            screenshot_path = os.path.join(cache_dir, screenshot_filename)
+            
+            # 对主程序窗口进行截图
+            # 方法1：精确截取主程序窗口（推荐）
+            if hasattr(self.main_diablo_window, 'left') and hasattr(self.main_diablo_window, 'top'):
+                # 获取窗口的位置和大小
+                window_left = self.main_diablo_window.left
+                window_top = self.main_diablo_window.top
+                window_width = self.main_diablo_window.width
+                window_height = self.main_diablo_window.height
+                
+                # 截取指定区域
+                screenshot = pyautogui.screenshot(region=(window_left, window_top, window_width, window_height))
+                screenshot.save(screenshot_path)
+            else:
+                # 方法2：全屏截图（备用方案）
+                screenshot = pyautogui.screenshot()
+                screenshot.save(screenshot_path)
+            
+            print(f"截图已保存：{screenshot_path}")
+            return screenshot_path
+            
+        except Exception as e:
+            print(f"截图保存失败：{str(e)}")
+            messagebox.warning("截图提示", f"脚本执行结束，但截图保存失败：{str(e)}")
+            return None
+
     def _toggle_stop_on_background(self):
         """切换「主程序后台时自动停止脚本」的状态"""
         self.stop_on_background = self.stop_on_background_var.get()
@@ -412,7 +459,7 @@ class DiabloWindowMonitor:
     def _add_countdown_commands(self):
         """在脚本末尾添加系统倒计时命令"""
         # 倒计时5秒命令（仅显示，不执行鼠标/按键操作）
-        for i in range(int(self.loop_interval), 0, -1):
+        for i in range(5, 0, -1):
             self.script_commands.append({
                 "key": f"倒计时{i}秒",
                 "x": 0.0,
@@ -658,9 +705,6 @@ class DiabloWindowMonitor:
         """加载CSV脚本文件（千分比坐标）"""
         # 检查是否选中主程序
         if not self.main_diablo_window:
-            messagebox.showwarning(
-                "警告", "请先双击暗黑窗口列表选中主程序窗口后再加载脚本。"
-            )
             return
             
         file_path = filedialog.askopenfilename(
@@ -668,6 +712,9 @@ class DiabloWindowMonitor:
             title="加载脚本文件"
         )
         if file_path:
+            # 保存当前加载的脚本文件路径
+            self.script_file_path = file_path
+            
             try:
                 with open(file_path, "r", newline="", encoding="utf-8") as f:
                     reader = csv.reader(f)
@@ -755,9 +802,6 @@ class DiabloWindowMonitor:
         
         # 检查是否选中主程序
         if not self.main_diablo_window:
-            messagebox.showwarning(
-                "警告", "请先双击暗黑窗口列表选中主程序窗口后再启动脚本。"
-            )
             return
         
         self.script_running = True
@@ -821,6 +865,9 @@ class DiabloWindowMonitor:
         for cmd in self.script_commands:
             cmd["status"] = "未执行"
         self._update_script_tree()
+        
+        # 执行结束后截图
+        self.root.after(0, self._capture_main_window_screenshot)
 
     def _run_script(self):
         """脚本执行核心逻辑（基于主程序千分比坐标）"""
@@ -891,11 +938,14 @@ class DiabloWindowMonitor:
                         foreground="green"
                     ))
                 else:
+                    # 非循环模式下执行完成，停止脚本并截图
                     self.root.after(0, self._stop_script)
                     self.root.after(0, lambda: self.script_status_label.config(
                         text="脚本状态：执行完成", 
                         foreground="purple"
                     ))
+                    # 执行截图
+                    self.root.after(0, self._capture_main_window_screenshot)
                     break
 
     def _stop_monitor(self):
@@ -908,7 +958,7 @@ class DiabloWindowMonitor:
 
 if __name__ == "__main__":
     # 自动安装依赖
-    required_libs = ["pygetwindow", "pyautogui"]
+    required_libs = ["pygetwindow", "pyautogui", "Pillow"]  # 添加Pillow依赖（截图保存需要）
     for lib in required_libs:
         try:
             __import__(lib)
