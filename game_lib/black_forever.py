@@ -69,7 +69,7 @@ class DiabloWindowMonitor:
         self.script_current_index = 0      # 脚本当前执行位置
         self.script_loop = True            # 是否循环执行脚本
         self.loop_interval = 5             # 循环间隔时间（默认5秒）
-        self.stop_on_background = True     # 主程序后台时自动停止脚本（默认开启）
+        self.stop_on_background = False     # 主程序后台时自动停止脚本（默认开启）
         
         # 气泡相关变量
         self.bubble_windows = []           # 气泡窗口列表
