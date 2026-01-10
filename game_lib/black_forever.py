@@ -69,8 +69,8 @@ class DiabloWindowMonitor:
         self.script_thread = None          # 脚本执行线程
         self.script_current_index = 0      # 脚本当前执行位置
         self.script_loop = True            # 是否循环执行脚本
-        self.loop_interval = 5             # 循环间隔时间（默认5秒）
-        self.stop_on_background = True     # 主程序后台时自动停止脚本（默认开启）
+        self.loop_interval = 30            # 循环间隔时间（默认改为30秒）
+        self.stop_on_background = False     # 主程序后台时自动停止脚本（默认开启）
         self.script_file_path = ""         # 当前加载的脚本文件路径
         
         # 气泡相关变量
@@ -240,7 +240,7 @@ class DiabloWindowMonitor:
         # 循环间隔输入框
         ttk.Label(script_ctrl_frame, text="循环间隔(秒)：", font=("微软雅黑", 10)).pack(side=tk.LEFT, padx=5)
         self.interval_entry = ttk.Entry(script_ctrl_frame, width=8, font=("微软雅黑", 10))
-        self.interval_entry.insert(0, str(self.loop_interval))
+        self.interval_entry.insert(0, str(self.loop_interval))  # 输入框默认显示30秒
         self.interval_entry.pack(side=tk.LEFT, padx=5)
         # 确认间隔按钮
         self.set_interval_btn = ttk.Button(script_ctrl_frame, text="确认", command=self._set_loop_interval)
@@ -459,7 +459,7 @@ class DiabloWindowMonitor:
     def _add_countdown_commands(self):
         """在脚本末尾添加系统倒计时命令"""
         # 倒计时5秒命令（仅显示，不执行鼠标/按键操作）
-        for i in range(5, 0, -1):
+        for i in range(self.loop_interval, 0, -1):
             self.script_commands.append({
                 "key": f"倒计时{i}秒",
                 "x": 0.0,
@@ -958,7 +958,7 @@ class DiabloWindowMonitor:
 
 if __name__ == "__main__":
     # 自动安装依赖
-    required_libs = ["pygetwindow", "pyautogui", "Pillow"]  # 添加Pillow依赖（截图保存需要）
+    required_libs = ["pygetwindow", "pyautogui"]  # 添加Pillow依赖（截图保存需要）
     for lib in required_libs:
         try:
             __import__(lib)
