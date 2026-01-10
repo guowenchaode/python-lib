@@ -412,7 +412,7 @@ class DiabloWindowMonitor:
     def _add_countdown_commands(self):
         """在脚本末尾添加系统倒计时命令"""
         # 倒计时5秒命令（仅显示，不执行鼠标/按键操作）
-        for i in range(5, 0, -1):
+        for i in range(int(self.loop_interval), 0, -1):
             self.script_commands.append({
                 "key": f"倒计时{i}秒",
                 "x": 0.0,
