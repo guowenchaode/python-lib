@@ -74,7 +74,7 @@ class DiabloWindowMonitor:
         self.script_thread = None  # 脚本执行线程
         self.script_current_index = 0  # 脚本当前执行位置
         self.script_loop = True  # 是否循环执行脚本
-        self.loop_interval = 5  # 循环间隔时间（默认改为30秒）
+        self.loop_interval = 30  # 循环间隔时间（默认改为30秒）
         self.stop_on_background = False  # 主程序后台时自动停止脚本（默认开启）
         self.script_file_path = ""  # 当前加载的脚本文件路径
 
