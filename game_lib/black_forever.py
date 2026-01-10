@@ -31,10 +31,10 @@ class BubbleWindow:
         label = ttk.Label(
             self.window,
             text=label_text,
-            font=("微软雅黑", 10, "bold"),
+            font=("微软雅黑", 12, ""),
             background=bg_color,
             foreground=fg_color,
-            padding=(8, 4)
+            padding=(1, 1)
         )
         label.pack()
         
