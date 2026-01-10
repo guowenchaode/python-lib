@@ -14,8 +14,8 @@ pyautogui.FAILSAFE = False
 pyautogui.PAUSE = 0.1
 
 class BubbleWindow:
-    """气泡提示窗口类 - 调整透明度和位置，避免遮挡点击坐标"""
-    def __init__(self, parent, x, y, text, is_highlight=False):
+    """气泡提示窗口类 - 显示执行序号+按键名字，避免遮挡点击坐标"""
+    def __init__(self, parent, x, y, index, key, is_highlight=False):
         self.window = tk.Toplevel(parent)
         self.window.overrideredirect(True)  # 去掉窗口边框
         self.window.attributes('-topmost', True)  # 置顶
@@ -26,10 +26,11 @@ class BubbleWindow:
         bg_color = "#ff4444" if is_highlight else "#4444ff"
         fg_color = "white"
         
-        # 创建气泡内容
+        # 创建气泡内容：序号 + 按键
+        label_text = f"[{index}] {key}"
         label = ttk.Label(
             self.window,
-            text=text,
+            text=label_text,
             font=("微软雅黑", 10, "bold"),
             background=bg_color,
             foreground=fg_color,
@@ -72,7 +73,7 @@ class DiabloWindowMonitor:
         
         # 气泡相关变量
         self.bubble_windows = []           # 气泡窗口列表
-        self.highlighted_bubble = None     # 当前高亮的气泡
+        self.highlighted_bubble = None     # 当前高亮的气泡（下一个待执行命令）
         self.bubbles_visible = True        # 气泡是否显示
         
         # 初始化UI
@@ -100,14 +101,14 @@ class DiabloWindowMonitor:
         
         title_label = ttk.Label(
             title_frame, 
-            text="暗黑破坏神窗口监控工具 | 千分比坐标版", 
+            text="暗黑破坏神窗口监控工具 | 千分比坐标版 | 停止显全部气泡/运行显下一个命令", 
             font=("微软雅黑", 14, "bold")
         )
         title_label.pack(side=tk.LEFT)
         
         bubble_hint_label = ttk.Label(
             title_frame,
-            text="【F12/按钮】显示/隐藏气泡 | 双击暗黑窗口列表选中主程序 | 气泡位置：点击坐标右侧 | 坐标：主程序千分比",
+            text="【F12/按钮】显示/隐藏气泡 | 双击暗黑窗口列表选中主程序 | 气泡：[序号] 按键 | 坐标：主程序千分比",
             font=("微软雅黑", 9),
             foreground="gray"
         )
@@ -328,9 +329,8 @@ class DiabloWindowMonitor:
                 self.window_tree.item(row, tags=("normal",))
             self.window_tree.item(item, tags=("main",))
             
-            # 重新创建气泡（基于主程序+千分比坐标）
-            if self.bubbles_visible and self.script_commands:
-                self._create_bubbles()
+            # 根据脚本状态创建气泡
+            self._create_bubbles_by_script_status()
 
     def _toggle_bubbles_visibility(self, event=None):
         """切换气泡显示/隐藏"""
@@ -339,24 +339,48 @@ class DiabloWindowMonitor:
         # 更新按钮文本
         if self.bubbles_visible:
             self.toggle_bubble_btn.config(text="隐藏气泡")
-            # 重新创建气泡（基于主程序+千分比坐标）
-            self._create_bubbles()
-            # 重新高亮当前命令气泡
-            if self.script_running and self.script_current_index < len(self.script_commands):
-                self._highlight_bubble(self.script_current_index)
+            self._create_bubbles_by_script_status()
         else:
             self.toggle_bubble_btn.config(text="显示气泡")
-            # 销毁所有气泡
             self._destroy_all_bubbles()
 
     def _destroy_all_bubbles(self):
-        """销毁所有气泡"""
+        """销毁所有气泡（普通气泡+高亮气泡）"""
         for bubble in self.bubble_windows:
             bubble.destroy()
         self.bubble_windows = []
         if self.highlighted_bubble:
             self.highlighted_bubble.destroy()
             self.highlighted_bubble = None
+
+    def _create_bubbles_by_script_status(self):
+        """根据脚本运行状态创建气泡：停止显全部，运行显下一个"""
+        if not self.bubbles_visible:
+            return
+        
+        self._destroy_all_bubbles()
+        if not self.script_commands or not self.main_diablo_window or self.main_window_size == (0, 0):
+            return
+        
+        if self.script_running:
+            # 脚本运行中：仅显示下一个待执行命令的高亮气泡
+            next_idx = self.script_current_index
+            # 跳过倒计时命令，找到下一个有效命令
+            while next_idx < len(self.script_commands):
+                cmd = self.script_commands[next_idx]
+                if cmd["source"] != "系统倒计时":
+                    abs_x, abs_y = self._permil_to_absolute(cmd["x"], cmd["y"])
+                    self.highlighted_bubble = BubbleWindow(self.root, abs_x, abs_y, next_idx+1, cmd["key"], is_highlight=True)
+                    break
+                next_idx += 1
+        else:
+            # 脚本停止：显示所有命令的普通气泡
+            for idx, cmd in enumerate(self.script_commands):
+                if cmd["source"] == "系统倒计时":
+                    continue
+                abs_x, abs_y = self._permil_to_absolute(cmd["x"], cmd["y"])
+                bubble = BubbleWindow(self.root, abs_x, abs_y, idx+1, cmd["key"])
+                self.bubble_windows.append(bubble)
 
     def _permil_to_absolute(self, x_permil, y_permil):
         """将千分比坐标转换为绝对坐标（基于主程序）"""
@@ -367,49 +391,6 @@ class DiabloWindowMonitor:
         abs_x = self.main_diablo_window.left + (self.main_window_size[0] * x_permil)
         abs_y = self.main_diablo_window.top + (self.main_window_size[1] * y_permil)
         return (int(abs_x), int(abs_y))
-
-    def _create_bubbles(self):
-        """基于主程序千分比坐标创建气泡"""
-        if not self.bubbles_visible:
-            return
-            
-        self._destroy_all_bubbles()
-        if not self.script_commands or not self.main_diablo_window or self.main_window_size == (0, 0):
-            return
-        
-        for idx, cmd in enumerate(self.script_commands):
-            # 跳过倒计时命令
-            if cmd["source"] == "系统倒计时":
-                continue
-            # 将千分比转换为绝对坐标
-            abs_x, abs_y = self._permil_to_absolute(cmd["x"], cmd["y"])
-            # 创建气泡（位置在点击坐标右侧，避免遮挡）
-            bubble = BubbleWindow(self.root, abs_x, abs_y, cmd["key"])
-            self.bubble_windows.append(bubble)
-        
-        # 高亮当前命令的气泡（如果脚本正在运行）
-        if self.script_running and self.script_current_index < len(self.script_commands):
-            self._highlight_bubble(self.script_current_index)
-
-    def _highlight_bubble(self, index):
-        """基于主程序千分比坐标高亮指定索引的气泡"""
-        if not self.bubbles_visible or not self.main_diablo_window or self.main_window_size == (0, 0):
-            return
-            
-        # 跳过倒计时命令的高亮
-        if index < len(self.script_commands) and self.script_commands[index]["source"] == "系统倒计时":
-            return
-            
-        # 销毁原有高亮气泡
-        if self.highlighted_bubble:
-            self.highlighted_bubble.destroy()
-        
-        if 0 <= index < len(self.script_commands):
-            cmd = self.script_commands[index]
-            # 将千分比转换为绝对坐标
-            abs_x, abs_y = self._permil_to_absolute(cmd["x"], cmd["y"])
-            # 创建高亮气泡（红色）
-            self.highlighted_bubble = BubbleWindow(self.root, abs_x, abs_y, cmd["key"], is_highlight=True)
 
     def _add_countdown_commands(self):
         """在脚本末尾添加系统倒计时命令"""
@@ -484,9 +465,9 @@ class DiabloWindowMonitor:
                 if not self._check_main_window_foreground():
                     self.root.after(0, self._stop_script)
             
-            # 如果气泡显示且脚本已加载且选中主程序，动态更新气泡位置
-            if self.bubbles_visible and self.script_commands and self.main_diablo_window and not self.script_running:
-                self.root.after(0, self._create_bubbles)
+            # 动态更新气泡（根据脚本状态）
+            if self.bubbles_visible and self.script_commands and self.main_diablo_window:
+                self.root.after(0, self._create_bubbles_by_script_status)
                 
             time.sleep(0.5)
 
@@ -701,8 +682,8 @@ class DiabloWindowMonitor:
                 
                 # 更新脚本表格
                 self._update_script_tree()
-                # 创建气泡提示
-                self.root.after(0, self._create_bubbles)
+                # 根据脚本状态创建气泡
+                self.root.after(0, self._create_bubbles_by_script_status)
                 # 更新按钮状态
                 self.start_script_btn.config(state=tk.NORMAL)
                 self.pause_script_btn.config(state=tk.DISABLED)
@@ -762,9 +743,6 @@ class DiabloWindowMonitor:
             cmd["status"] = "未执行"
         self._update_script_tree()
         
-        # 高亮第一个命令的气泡
-        self.root.after(0, lambda: self._highlight_bubble(0))
-        
         # 更新按钮状态
         self.start_script_btn.config(state=tk.DISABLED)
         self.pause_script_btn.config(state=tk.NORMAL)
@@ -797,15 +775,11 @@ class DiabloWindowMonitor:
             if self.script_current_index < len(self.script_commands):
                 self.script_commands[self.script_current_index]["status"] = "执行中"
                 self._update_script_tree()
-                self.root.after(0, lambda: self._highlight_bubble(self.script_current_index))
 
     def _stop_script(self):
         """停止脚本执行"""
         self.script_running = False
         self.script_paused = False
-        
-        # 销毁高亮气泡，恢复普通气泡
-        self.root.after(0, self._create_bubbles)
         
         # 更新按钮状态
         self.start_script_btn.config(state=tk.NORMAL)
@@ -856,15 +830,6 @@ class DiabloWindowMonitor:
                     cmd["status"] = "已完成"
                     self.root.after(0, self._update_script_tree)
                     
-                    # 计算下一个索引
-                    next_index = self.script_current_index + 1
-                    if next_index >= len(self.script_commands) and self.script_loop:
-                        next_index = 0
-                    
-                    # 高亮下一个命令的气泡
-                    if self.script_running and not self.script_paused:
-                        self.root.after(0, lambda idx=next_index: self._highlight_bubble(idx))
-                    
                 except Exception as e:
                     cmd["status"] = "执行失败"
                     self.root.after(0, self._update_script_tree)
@@ -899,7 +864,6 @@ class DiabloWindowMonitor:
                         text="脚本状态：循环中", 
                         foreground="green"
                     ))
-                    self.root.after(0, lambda: self._highlight_bubble(0))
                 else:
                     self.root.after(0, self._stop_script)
                     self.root.after(0, lambda: self.script_status_label.config(
