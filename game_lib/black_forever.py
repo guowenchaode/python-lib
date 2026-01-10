@@ -13,11 +13,42 @@ pyautogui.FAILSAFE = False
 # 设置pyautogui操作间隔（防止操作过快）
 pyautogui.PAUSE = 0.1
 
+class BubbleWindow:
+    """气泡提示窗口类 - 调整透明度和位置，避免遮挡点击坐标"""
+    def __init__(self, parent, x, y, text, is_highlight=False):
+        self.window = tk.Toplevel(parent)
+        self.window.overrideredirect(True)  # 去掉窗口边框
+        self.window.attributes('-topmost', True)  # 置顶
+        # 调整透明度为50%
+        self.window.attributes('-alpha', 0.5)
+        
+        # 气泡样式
+        bg_color = "#ff4444" if is_highlight else "#4444ff"
+        fg_color = "white"
+        
+        # 创建气泡内容
+        label = ttk.Label(
+            self.window,
+            text=text,
+            font=("微软雅黑", 10, "bold"),
+            background=bg_color,
+            foreground=fg_color,
+            padding=(8, 4)
+        )
+        label.pack()
+        
+        # 调整气泡位置：鼠标点击坐标的**右侧10px**，避免遮挡
+        self.window.geometry(f"+{x+10}+{y}")
+        
+    def destroy(self):
+        """销毁气泡"""
+        self.window.destroy()
+
 class DiabloWindowMonitor:
     def __init__(self, root):
         self.root = root
         self.root.title("暗黑破坏神窗口监控工具 | 脚本执行版")
-        self.root.geometry("900x750")
+        self.root.geometry("1180x780")
         self.root.resizable(False, False)
         
         # 核心变量
@@ -25,6 +56,8 @@ class DiabloWindowMonitor:
         self.is_diablo_foreground = False  # 暗黑窗口是否前台
         self.key_pos_records = {}          # 按键-坐标记录字典 {按键: (x,y)}
         self.is_tool_foreground = True     # 工具是否前台
+        self.main_diablo_window = None     # 选中的主程序窗口
+        self.main_window_title = ""        # 主程序窗口标题
         
         # 脚本执行相关变量
         self.script_commands = []          # CSV加载的脚本命令列表
@@ -34,6 +67,12 @@ class DiabloWindowMonitor:
         self.script_current_index = 0      # 脚本当前执行位置
         self.script_loop = True            # 是否循环执行脚本
         self.loop_interval = 5             # 循环间隔时间（默认5秒）
+        self.stop_on_background = True     # 新增：主程序后台时自动停止脚本（默认开启）
+        
+        # 气泡相关变量
+        self.bubble_windows = []           # 气泡窗口列表
+        self.highlighted_bubble = None     # 当前高亮的气泡
+        self.bubbles_visible = True        # 气泡是否显示
         
         # 初始化UI
         self._init_ui()
@@ -42,6 +81,8 @@ class DiabloWindowMonitor:
         self.root.bind("<Key>", self._on_key_press)
         self.root.bind("<FocusIn>", lambda e: setattr(self, "is_tool_foreground", True))
         self.root.bind("<FocusOut>", lambda e: setattr(self, "is_tool_foreground", False))
+        # 绑定气泡显示/隐藏快捷键（F12）
+        self.root.bind("<F12>", self._toggle_bubbles_visibility)
         
         # 启动监控线程
         self.monitor_running = True
@@ -52,13 +93,24 @@ class DiabloWindowMonitor:
 
     def _init_ui(self):
         """初始化界面布局"""
-        # 1. 标题区域
+        # 1. 标题区域 + 气泡控制提示
+        title_frame = ttk.Frame(self.root)
+        title_frame.pack(pady=10)
+        
         title_label = ttk.Label(
-            self.root, 
+            title_frame, 
             text="暗黑破坏神窗口监控工具 | 脚本执行版", 
             font=("微软雅黑", 14, "bold")
         )
-        title_label.pack(pady=10)
+        title_label.pack(side=tk.LEFT)
+        
+        bubble_hint_label = ttk.Label(
+            title_frame,
+            text="【F12/按钮】显示/隐藏气泡 | 双击暗黑窗口列表选中主程序 | 气泡位置：点击坐标右侧",
+            font=("微软雅黑", 9),
+            foreground="gray"
+        )
+        bubble_hint_label.pack(side=tk.LEFT, padx=20)
         
         # 2. 鼠标位置区域
         mouse_frame = ttk.LabelFrame(self.root, text="鼠标位置信息", padding=10)
@@ -70,6 +122,10 @@ class DiabloWindowMonitor:
         self.mouse_rel_label = ttk.Label(mouse_frame, text="相对位置：(X: --, Y: --)", font=("微软雅黑", 10))
         self.mouse_rel_label.pack(side=tk.LEFT, padx=10)
         
+        # 主程序提示
+        self.main_window_label = ttk.Label(mouse_frame, text="当前主程序：未选中", font=("微软雅黑", 10), foreground="blue")
+        self.main_window_label.pack(side=tk.LEFT, padx=20)
+        
         # 3. 暗黑窗口状态区域
         self.status_label = ttk.Label(
             self.root,
@@ -79,12 +135,13 @@ class DiabloWindowMonitor:
         self.status_label.pack(pady=5)
         
         # 4. 暗黑窗口信息表格
-        window_frame = ttk.LabelFrame(self.root, text="暗黑窗口信息", padding=10)
+        window_frame = ttk.LabelFrame(self.root, text="暗黑窗口信息（双击选中主程序）", padding=10)
         window_frame.pack(fill=tk.X, padx=20, pady=5)
         
         window_tree_style = ttk.Style()
         window_tree_style.configure("Treeview", font=("微软雅黑", 10))
         window_tree_style.configure("Treeview.Heading", font=("微软雅黑", 10, "bold"))
+        window_tree_style.configure("main.Treeview", background="#e8f4f8")  # 主程序行高亮样式
         
         self.window_tree = ttk.Treeview(window_frame, columns=("标题", "位置", "大小", "状态"), show="headings", height=3)
         self.window_tree.heading("标题", text="窗口标题")
@@ -110,7 +167,7 @@ class DiabloWindowMonitor:
         
         self.record_tree = ttk.Treeview(record_frame, columns=("按键", "相对坐标"), show="headings", style="Record.Treeview", height=5)
         self.record_tree.heading("按键", text="按键")
-        self.record_tree.heading("相对坐标", text="暗黑窗口内相对坐标")
+        self.record_tree.heading("相对坐标", text="主程序内相对坐标")
         self.record_tree.column("按键", width=100)
         self.record_tree.column("相对坐标", width=200)
         self.record_tree.pack(side=tk.LEFT, fill=tk.X, expand=True)
@@ -136,6 +193,15 @@ class DiabloWindowMonitor:
         script_ctrl_frame = ttk.Frame(script_frame)
         script_ctrl_frame.pack(fill=tk.X, pady=5)
         
+        # 显示主程序名称
+        self.script_main_window_label = ttk.Label(
+            script_ctrl_frame, 
+            text="主程序：未选中", 
+            font=("微软雅黑", 10, "bold"), 
+            foreground="red"
+        )
+        self.script_main_window_label.pack(side=tk.LEFT, padx=5)
+        
         self.load_script_btn = ttk.Button(script_ctrl_frame, text="加载CSV脚本", command=self._load_script)
         self.load_script_btn.pack(side=tk.LEFT, padx=5)
         
@@ -147,6 +213,20 @@ class DiabloWindowMonitor:
         
         self.stop_script_btn = ttk.Button(script_ctrl_frame, text="停止脚本", command=self._stop_script, state=tk.DISABLED)
         self.stop_script_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 气泡显示/隐藏按钮
+        self.toggle_bubble_btn = ttk.Button(script_ctrl_frame, text="隐藏气泡", command=self._toggle_bubbles_visibility)
+        self.toggle_bubble_btn.pack(side=tk.LEFT, padx=5)
+        
+        # 新增：主程序后台时自动停止脚本复选框
+        self.stop_on_background_var = tk.BooleanVar(value=self.stop_on_background)
+        self.stop_on_background_check = ttk.Checkbutton(
+            script_ctrl_frame,
+            text="主程序后台时自动停止脚本",
+            variable=self.stop_on_background_var,
+            command=self._toggle_stop_on_background
+        )
+        self.stop_on_background_check.pack(side=tk.LEFT, padx=10)
         
         # 循环执行相关控件
         self.loop_var = tk.BooleanVar(value=True)
@@ -166,17 +246,19 @@ class DiabloWindowMonitor:
         self.script_status_label = ttk.Label(script_ctrl_frame, text="脚本状态：未加载", font=("微软雅黑", 10))
         self.script_status_label.pack(side=tk.RIGHT, padx=10)
         
-        # 脚本命令表格
-        self.script_tree = ttk.Treeview(script_frame, columns=("序号", "按键", "坐标", "状态"), show="headings", height=8)
+        # 脚本命令表格（保留命令来源列）
+        self.script_tree = ttk.Treeview(script_frame, columns=("序号", "按键", "坐标", "状态", "命令来源"), show="headings", height=8)
         self.script_tree.heading("序号", text="序号")
         self.script_tree.heading("按键", text="按键")
-        self.script_tree.heading("坐标", text="相对坐标")
+        self.script_tree.heading("坐标", text="主程序内相对坐标")
         self.script_tree.heading("状态", text="执行状态")
+        self.script_tree.heading("命令来源", text="命令来源")
         
         self.script_tree.column("序号", width=60)
         self.script_tree.column("按键", width=80)
         self.script_tree.column("坐标", width=200)
         self.script_tree.column("状态", width=100)
+        self.script_tree.column("命令来源", width=120)
         
         # 脚本表格滚动条
         script_scroll = ttk.Scrollbar(script_frame, orient=tk.VERTICAL, command=self.script_tree.yview)
@@ -192,16 +274,159 @@ class DiabloWindowMonitor:
         self.stop_btn = ttk.Button(exit_frame, text="停止监控", command=self._stop_monitor)
         self.stop_btn.pack()
 
+    def _toggle_stop_on_background(self):
+        """切换「主程序后台时自动停止脚本」的状态 - 移除弹窗提示"""
+        self.stop_on_background = self.stop_on_background_var.get()
+
+    def _check_main_window_foreground(self):
+        """检查主程序是否为前台窗口"""
+        if not self.main_diablo_window:
+            return False
+        
+        try:
+            foreground_window = gw.getActiveWindow()
+            if not foreground_window:
+                return False
+            return foreground_window.title.strip() == self.main_diablo_window.title.strip()
+        except Exception:
+            return False
+
+    def _update_main_window_display(self):
+        """更新主程序显示信息"""
+        if self.main_diablo_window:
+            self.main_window_title = self.main_diablo_window.title.strip()
+            self.main_window_label.config(text=f"当前主程序：{self.main_window_title[:20]}...")
+            self.script_main_window_label.config(text=f"主程序：{self.main_window_title[:20]}...", foreground="green")
+        else:
+            self.main_window_title = ""
+            self.main_window_label.config(text="当前主程序：未选中")
+            self.script_main_window_label.config(text="主程序：未选中", foreground="red")
+
+    def _on_window_double_click(self, event):
+        """双击选中主程序窗口 - 移除成功提示弹窗"""
+        item = self.window_tree.identify_row(event.y)
+        if not item:
+            return
+        values = self.window_tree.item(item, "values")
+        if values and values[0] != "未检测到暗黑破坏神窗口":
+            # 找到对应的窗口对象
+            diablo_windows = self._get_diablo_windows()
+            for win_info in diablo_windows:
+                if win_info["title"] == values[0]:
+                    self.main_diablo_window = win_info["window_obj"]
+                    break
+            
+            # 更新显示和表格样式
+            self._update_main_window_display()
+            
+            # 高亮选中的行
+            for row in self.window_tree.get_children():
+                self.window_tree.item(row, tags=("normal",))
+            self.window_tree.item(item, tags=("main",))
+            
+            # 重新创建气泡（基于主程序+新位置）
+            if self.bubbles_visible and self.script_commands:
+                self._create_bubbles()
+
+    def _toggle_bubbles_visibility(self, event=None):
+        """切换气泡显示/隐藏（更新按钮文本） - 移除弹窗提示"""
+        self.bubbles_visible = not self.bubbles_visible
+        
+        # 更新按钮文本
+        if self.bubbles_visible:
+            self.toggle_bubble_btn.config(text="隐藏气泡")
+            # 重新创建气泡（基于主程序+新位置）
+            self._create_bubbles()
+            # 重新高亮当前命令气泡
+            if self.script_running and self.script_current_index < len(self.script_commands):
+                self._highlight_bubble(self.script_current_index)
+        else:
+            self.toggle_bubble_btn.config(text="显示气泡")
+            # 销毁所有气泡
+            self._destroy_all_bubbles()
+
+    def _destroy_all_bubbles(self):
+        """销毁所有气泡"""
+        for bubble in self.bubble_windows:
+            bubble.destroy()
+        self.bubble_windows = []
+        if self.highlighted_bubble:
+            self.highlighted_bubble.destroy()
+            self.highlighted_bubble = None
+
+    def _create_bubbles(self):
+        """基于主程序创建脚本命令对应的气泡 - 位置调整为点击坐标右侧"""
+        if not self.bubbles_visible:
+            return
+            
+        self._destroy_all_bubbles()
+        if not self.script_commands or not self.main_diablo_window:
+            return
+        
+        for idx, cmd in enumerate(self.script_commands):
+            # 跳过倒计时命令
+            if cmd["source"] == "系统倒计时":
+                continue
+            # 基于主程序计算绝对坐标，气泡位置为点击坐标右侧10px
+            abs_x = self.main_diablo_window.left + cmd["x"]
+            abs_y = self.main_diablo_window.top + cmd["y"]
+            # 创建气泡（位置在点击坐标右侧，避免遮挡）
+            bubble = BubbleWindow(self.root, abs_x, abs_y, cmd["key"])
+            self.bubble_windows.append(bubble)
+        
+        # 高亮当前命令的气泡（如果脚本正在运行）
+        if self.script_running and self.script_current_index < len(self.script_commands):
+            self._highlight_bubble(self.script_current_index)
+
+    def _highlight_bubble(self, index):
+        """基于主程序高亮指定索引的气泡 - 位置调整为点击坐标右侧"""
+        if not self.bubbles_visible or not self.main_diablo_window:
+            return
+            
+        # 跳过倒计时命令的高亮
+        if index < len(self.script_commands) and self.script_commands[index]["source"] == "系统倒计时":
+            return
+            
+        # 销毁原有高亮气泡
+        if self.highlighted_bubble:
+            self.highlighted_bubble.destroy()
+        
+        if 0 <= index < len(self.script_commands):
+            cmd = self.script_commands[index]
+            # 基于主程序计算绝对坐标，高亮气泡位置同样在右侧
+            abs_x = self.main_diablo_window.left + cmd["x"]
+            abs_y = self.main_diablo_window.top + cmd["y"]
+            # 创建高亮气泡（红色）
+            self.highlighted_bubble = BubbleWindow(self.root, abs_x, abs_y, cmd["key"], is_highlight=True)
+
+    def _add_countdown_commands(self):
+        """在脚本末尾添加系统倒计时命令"""
+        # 倒计时5秒命令（仅显示，不执行鼠标/按键操作）
+        for i in range(5, 0, -1):
+            self.script_commands.append({
+                "key": f"倒计时{i}秒",
+                "x": 0,
+                "y": 0,
+                "status": "未执行",
+                "source": "系统倒计时"
+            })
+        # 倒计时结束命令
+        self.script_commands.append({
+            "key": "倒计时结束",
+            "x": 0,
+            "y": 0,
+            "status": "未执行",
+            "source": "系统倒计时"
+        })
+
     def _set_loop_interval(self):
-        """设置循环间隔时间"""
+        """设置循环间隔时间 - 移除弹窗提示"""
         try:
             interval = float(self.interval_entry.get())
             if interval < 0:
                 raise ValueError("间隔时间不能为负数")
             self.loop_interval = interval
-            messagebox.showinfo("成功", f"循环间隔已设置为：{self.loop_interval} 秒")
         except ValueError as e:
-            messagebox.showerror("错误", f"输入无效：{e}\n请输入非负数字")
             # 恢复原有值
             self.interval_entry.delete(0, tk.END)
             self.interval_entry.insert(0, str(self.loop_interval))
@@ -236,30 +461,49 @@ class DiabloWindowMonitor:
         return diablo_windows
 
     def _monitor_windows(self):
-        """监控暗黑窗口状态（0.5秒刷新）"""
+        """监控暗黑窗口状态（0.5秒刷新），新增主程序前台检测 - 移除自动停止弹窗"""
         while self.monitor_running:
             windows_info = self._get_diablo_windows()
             self.root.after(0, self._update_window_tree, windows_info)
             self.root.after(0, self._update_status_label)
+            
+            # 新增：检查主程序是否前台，若开启自动停止功能则执行停止
+            if self.script_running and self.stop_on_background and self.main_diablo_window:
+                if not self._check_main_window_foreground():
+                    self.root.after(0, self._stop_script)
+            
+            # 如果气泡显示且脚本已加载且选中主程序，动态更新气泡位置
+            if self.bubbles_visible and self.script_commands and self.main_diablo_window and not self.script_running:
+                self.root.after(0, self._create_bubbles)
+                
             time.sleep(0.5)
 
     def _monitor_mouse(self):
-        """监控鼠标位置（10ms刷新）"""
+        """监控鼠标位置（基于主程序计算相对坐标）"""
         while self.monitor_running:
             try:
                 mouse_x, mouse_y = pyautogui.position()
                 rel_x, rel_y = "--", "--"
                 self.current_diablo_window = None
                 
-                diablo_windows = self._get_diablo_windows()
-                for win_info in diablo_windows:
-                    win = win_info["window_obj"]
-                    if (win.left <= mouse_x <= win.left + win.width and
-                        win.top <= mouse_y <= win.top + win.height):
-                        rel_x = mouse_x - win.left
-                        rel_y = mouse_y - win.top
-                        self.current_diablo_window = win
-                        break
+                # 优先基于主程序计算相对坐标
+                if self.main_diablo_window:
+                    if (self.main_diablo_window.left <= mouse_x <= self.main_diablo_window.left + self.main_diablo_window.width and
+                        self.main_diablo_window.top <= mouse_y <= self.main_diablo_window.top + self.main_diablo_window.height):
+                        rel_x = mouse_x - self.main_diablo_window.left
+                        rel_y = mouse_y - self.main_diablo_window.top
+                        self.current_diablo_window = self.main_diablo_window
+                else:
+                    # 未选中主程序时，兼容原有逻辑
+                    diablo_windows = self._get_diablo_windows()
+                    for win_info in diablo_windows:
+                        win = win_info["window_obj"]
+                        if (win.left <= mouse_x <= win.left + win.width and
+                            win.top <= mouse_y <= win.top + win.height):
+                            rel_x = mouse_x - win.left
+                            rel_y = mouse_y - win.top
+                            self.current_diablo_window = win
+                            break
                 
                 self.root.after(0, self._update_mouse_info, mouse_x, mouse_y, rel_x, rel_y)
                 time.sleep(0.01)
@@ -267,9 +511,9 @@ class DiabloWindowMonitor:
                 time.sleep(0.01)
 
     def _on_key_press(self, event):
-        """按键监听：工具前台时记录按键-相对坐标"""
-        # 仅工具前台且有暗黑窗口时记录
-        if not self.is_tool_foreground or not self.current_diablo_window or self.script_running:
+        """按键监听：基于主程序记录按键-相对坐标"""
+        # 仅工具前台且有主程序/暗黑窗口时记录
+        if not self.is_tool_foreground or (not self.main_diablo_window and not self.current_diablo_window) or self.script_running:
             return
         
         # 过滤功能键，只记录字母/数字/符号
@@ -277,17 +521,18 @@ class DiabloWindowMonitor:
         if not key or len(key) != 1:
             return
         
-        # 获取当前相对坐标
+        # 获取当前相对坐标（优先主程序）
         mouse_x, mouse_y = pyautogui.position()
-        rel_x = mouse_x - self.current_diablo_window.left
-        rel_y = mouse_y - self.current_diablo_window.top
+        target_window = self.main_diablo_window if self.main_diablo_window else self.current_diablo_window
+        rel_x = mouse_x - target_window.left
+        rel_y = mouse_y - target_window.top
         
         # 记录/覆盖按键坐标
         self.key_pos_records[key] = (int(rel_x), int(rel_y))
         self.root.after(0, self._update_record_tree)
 
     def _update_window_tree(self, windows_info):
-        """更新暗黑窗口表格（前台红色/后台黑色）"""
+        """更新暗黑窗口表格（标记主程序行）"""
         for item in self.window_tree.get_children():
             self.window_tree.delete(item)
         
@@ -297,10 +542,16 @@ class DiabloWindowMonitor:
         else:
             for win in windows_info:
                 item = self.window_tree.insert("", tk.END, values=(win["title"], win["pos"], win["size"], win["status"]))
-                self.window_tree.item(item, tags=("active" if win["is_active"] else "inactive"))
+                # 标记主程序行
+                if self.main_diablo_window and win["window_obj"].title == self.main_diablo_window.title:
+                    self.window_tree.item(item, tags=("main",))
+                else:
+                    self.window_tree.item(item, tags=("active" if win["is_active"] else "inactive"))
         
+        # 设置行样式
         self.window_tree.tag_configure("active", foreground="red")
         self.window_tree.tag_configure("inactive", foreground="black")
+        self.window_tree.tag_configure("main", background="#e8f4f8", foreground="darkblue", font=("微软雅黑", 10, "bold"))
 
     def _update_record_tree(self):
         """更新按键-坐标记录表格"""
@@ -322,21 +573,9 @@ class DiabloWindowMonitor:
         else:
             self.status_label.config(text="暗黑破坏神状态：后台运行", foreground="black")
 
-    def _on_window_double_click(self, event):
-        """双击暗黑窗口行复制标题"""
-        item = self.window_tree.identify_row(event.y)
-        if not item:
-            return
-        values = self.window_tree.item(item, "values")
-        if values and values[0] != "未检测到暗黑破坏神窗口":
-            self.root.clipboard_clear()
-            self.root.clipboard_append(values[0])
-            messagebox.showinfo("成功", f"已复制窗口标题：\n{values[0]}")
-
     def _export_records(self):
-        """导出记录到CSV文件"""
+        """导出记录到CSV文件 - 移除弹窗提示"""
         if not self.key_pos_records:
-            messagebox.showwarning("提示", "暂无记录可导出")
             return
         
         file_path = filedialog.asksaveasfilename(
@@ -351,12 +590,11 @@ class DiabloWindowMonitor:
                     writer.writerow(["按键", "相对X", "相对Y"])  # 表头
                     for key, (x, y) in sorted(self.key_pos_records.items()):
                         writer.writerow([key, x, y])
-                messagebox.showinfo("成功", f"记录已导出到：\n{file_path}")
             except Exception as e:
                 messagebox.showerror("错误", f"导出失败：{str(e)}")
 
     def _import_records(self):
-        """从CSV文件导入记录"""
+        """从CSV文件导入记录 - 移除弹窗提示"""
         file_path = filedialog.askopenfilename(
             filetypes=[("CSV文件", "*.csv"), ("所有文件", "*.*")],
             title="导入按键记录"
@@ -375,23 +613,24 @@ class DiabloWindowMonitor:
                                 self.key_pos_records[key] = (int(x), int(y))
                                 imported_count += 1
                 self._update_record_tree()
-                messagebox.showinfo("成功", f"成功导入 {imported_count} 条记录")
             except Exception as e:
                 messagebox.showerror("错误", f"导入失败：{str(e)}")
 
     def _clear_records(self):
-        """清空所有记录"""
+        """清空所有记录 - 移除弹窗提示"""
         if not self.key_pos_records:
-            messagebox.showwarning("提示", "暂无记录可清空")
             return
         
         if messagebox.askyesno("确认", "是否确定清空所有按键-坐标记录？"):
             self.key_pos_records.clear()
             self._update_record_tree()
-            messagebox.showinfo("成功", "记录已清空")
 
     def _load_script(self):
-        """加载CSV脚本文件"""
+        """加载CSV脚本文件（基于主程序） - 移除弹窗提示"""
+        # 检查是否选中主程序
+        if not self.main_diablo_window:
+            return
+            
         file_path = filedialog.askopenfilename(
             filetypes=[("CSV文件", "*.csv"), ("所有文件", "*.*")],
             title="加载脚本文件"
@@ -408,18 +647,23 @@ class DiabloWindowMonitor:
                                 "key": row[0],
                                 "x": int(row[1]),
                                 "y": int(row[2]),
-                                "status": "未执行"
+                                "status": "未执行",
+                                "source": "CSV导入"
                             })
+                
+                # 添加系统倒计时命令
+                self._add_countdown_commands()
                 
                 # 更新脚本表格
                 self._update_script_tree()
+                # 创建气泡提示（基于主程序+新位置）
+                self.root.after(0, self._create_bubbles)
                 # 更新按钮状态
                 self.start_script_btn.config(state=tk.NORMAL)
                 self.pause_script_btn.config(state=tk.DISABLED)
                 self.stop_script_btn.config(state=tk.DISABLED)
                 # 更新状态标签
-                self.script_status_label.config(text=f"脚本状态：已加载({len(self.script_commands)}条命令)", foreground="blue")
-                messagebox.showinfo("成功", f"成功加载 {len(self.script_commands)} 条脚本命令")
+                self.script_status_label.config(text=f"脚本状态：已加载({len(self.script_commands)}条命令，含系统倒计时)", foreground="blue")
             except Exception as e:
                 messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
 
@@ -433,7 +677,8 @@ class DiabloWindowMonitor:
                 idx+1,
                 cmd["key"],
                 f"{cmd['x']}, {cmd['y']}",
-                cmd["status"]
+                cmd["status"],
+                cmd.get("source", "未知")
             ), tags=(cmd["status"],))
         
         # 设置标签颜色
@@ -448,13 +693,12 @@ class DiabloWindowMonitor:
         self.script_loop = self.loop_var.get()
 
     def _start_script(self):
-        """启动脚本执行"""
+        """启动脚本执行（基于主程序） - 移除提示弹窗"""
         if not self.script_commands or self.script_running:
             return
         
-        # 检查是否有暗黑窗口
-        if not self._get_diablo_windows():
-            messagebox.showwarning("提示", "未检测到暗黑破坏神窗口，无法执行脚本")
+        # 检查是否选中主程序
+        if not self.main_diablo_window:
             return
         
         self.script_running = True
@@ -466,12 +710,15 @@ class DiabloWindowMonitor:
             cmd["status"] = "未执行"
         self._update_script_tree()
         
+        # 高亮第一个命令的气泡
+        self.root.after(0, lambda: self._highlight_bubble(0))
+        
         # 更新按钮状态
         self.start_script_btn.config(state=tk.DISABLED)
         self.pause_script_btn.config(state=tk.NORMAL)
         self.stop_script_btn.config(state=tk.NORMAL)
         self.load_script_btn.config(state=tk.DISABLED)
-        self.set_interval_btn.config(state=tk.DISABLED)  # 运行时禁止修改间隔
+        self.set_interval_btn.config(state=tk.DISABLED)
         
         # 更新状态标签
         self.script_status_label.config(text="脚本状态：运行中", foreground="green")
@@ -489,29 +736,31 @@ class DiabloWindowMonitor:
         if self.script_paused:
             self.pause_script_btn.config(text="恢复脚本")
             self.script_status_label.config(text="脚本状态：暂停中", foreground="orange")
-            # 更新当前命令状态
             if self.script_current_index < len(self.script_commands):
                 self.script_commands[self.script_current_index]["status"] = "暂停"
                 self._update_script_tree()
         else:
             self.pause_script_btn.config(text="暂停脚本")
             self.script_status_label.config(text="脚本状态：运行中", foreground="green")
-            # 恢复当前命令状态
             if self.script_current_index < len(self.script_commands):
                 self.script_commands[self.script_current_index]["status"] = "执行中"
                 self._update_script_tree()
+                self.root.after(0, lambda: self._highlight_bubble(self.script_current_index))
 
     def _stop_script(self):
         """停止脚本执行"""
         self.script_running = False
         self.script_paused = False
         
+        # 销毁高亮气泡，恢复普通气泡
+        self.root.after(0, self._create_bubbles)
+        
         # 更新按钮状态
         self.start_script_btn.config(state=tk.NORMAL)
         self.pause_script_btn.config(state=tk.DISABLED)
         self.stop_script_btn.config(state=tk.DISABLED)
         self.load_script_btn.config(state=tk.NORMAL)
-        self.set_interval_btn.config(state=tk.NORMAL)  # 停止后允许修改间隔
+        self.set_interval_btn.config(state=tk.NORMAL)
         
         # 更新状态标签
         self.script_status_label.config(text="脚本状态：已停止", foreground="red")
@@ -522,7 +771,7 @@ class DiabloWindowMonitor:
         self._update_script_tree()
 
     def _run_script(self):
-        """脚本执行核心逻辑（新增左键单击操作）"""
+        """脚本执行核心逻辑（基于主程序）"""
         while self.script_running:
             # 检查是否暂停
             while self.script_paused and self.script_running:
@@ -534,30 +783,38 @@ class DiabloWindowMonitor:
             # 执行当前命令
             if self.script_current_index < len(self.script_commands):
                 cmd = self.script_commands[self.script_current_index]
-                # 更新命令状态为执行中
                 cmd["status"] = "执行中"
                 self.root.after(0, self._update_script_tree)
                 
                 try:
-                    # 获取暗黑窗口（确保窗口存在）
-                    diablo_windows = self._get_diablo_windows()
-                    if diablo_windows:
-                        main_window = diablo_windows[0]["window_obj"]
-                        # 计算绝对坐标
-                        abs_x = main_window.left + cmd["x"]
-                        abs_y = main_window.top + cmd["y"]
-                        # 1. 移动鼠标到目标位置
-                        pyautogui.moveTo(abs_x, abs_y, duration=0.1)
-                        time.sleep(0.05)  # 移动后短暂等待，确保定位准确
-                        # 2. 左键单击
-                        pyautogui.click(button='left')
-                        time.sleep(0.05)  # 点击后短暂等待
-                        # 3. 模拟按键（原有逻辑保留）
-                        pyautogui.press(cmd["key"])
+                    # 判断是否为系统倒计时命令
+                    if cmd["source"] == "系统倒计时":
+                        time.sleep(1)
+                    else:
+                        # 基于选中的主程序执行操作
+                        if self.main_diablo_window:
+                            # 动态计算绝对坐标
+                            abs_x = self.main_diablo_window.left + cmd["x"]
+                            abs_y = self.main_diablo_window.top + cmd["y"]
+                            # 执行鼠标和按键操作
+                            pyautogui.moveTo(abs_x, abs_y, duration=0.1)
+                            time.sleep(0.05)
+                            pyautogui.click(button='left')
+                            time.sleep(0.05)
+                            pyautogui.press(cmd["key"])
                     
-                    # 更新命令状态为已完成
                     cmd["status"] = "已完成"
                     self.root.after(0, self._update_script_tree)
+                    
+                    # 计算下一个索引
+                    next_index = self.script_current_index + 1
+                    if next_index >= len(self.script_commands) and self.script_loop:
+                        next_index = 0
+                    
+                    # 高亮下一个命令的气泡
+                    if self.script_running and not self.script_paused:
+                        self.root.after(0, lambda idx=next_index: self._highlight_bubble(idx))
+                    
                 except Exception as e:
                     cmd["status"] = "执行失败"
                     self.root.after(0, self._update_script_tree)
@@ -565,17 +822,16 @@ class DiabloWindowMonitor:
                 
                 # 移动到下一条命令
                 self.script_current_index += 1
-                time.sleep(0.5)  # 命令间间隔
+                sleep_time = 1 if cmd["source"] == "系统倒计时" else 0.5
+                time.sleep(sleep_time)
             else:
                 # 所有命令执行完成
                 if self.script_loop:
-                    # 循环执行：先等待设定的间隔时间
                     self.root.after(0, lambda: self.script_status_label.config(
                         text=f"脚本状态：循环等待({self.loop_interval}秒)", 
                         foreground="purple"
                     ))
                     
-                    # 等待间隔时间（期间检查是否暂停/停止）
                     wait_start = time.time()
                     while time.time() - wait_start < self.loop_interval:
                         if not self.script_running or self.script_paused:
@@ -585,7 +841,6 @@ class DiabloWindowMonitor:
                     if not self.script_running:
                         break
                     
-                    # 重置索引和状态
                     self.script_current_index = 0
                     for cmd in self.script_commands:
                         cmd["status"] = "未执行"
@@ -594,8 +849,8 @@ class DiabloWindowMonitor:
                         text="脚本状态：循环中", 
                         foreground="green"
                     ))
+                    self.root.after(0, lambda: self._highlight_bubble(0))
                 else:
-                    # 单次执行：停止脚本
                     self.root.after(0, self._stop_script)
                     self.root.after(0, lambda: self.script_status_label.config(
                         text="脚本状态：执行完成", 
@@ -605,9 +860,9 @@ class DiabloWindowMonitor:
 
     def _stop_monitor(self):
         """停止监控并退出"""
-        # 先停止脚本
         if self.script_running:
             self._stop_script()
+        self._destroy_all_bubbles()
         self.monitor_running = False
         self.root.quit()
 
