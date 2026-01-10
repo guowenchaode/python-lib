@@ -1079,8 +1079,6 @@ class DiabloWindowMonitor:
             if not self.script_running:
                 break
 
-            # 执行当前命令
-            # if self.script_current_index < len(self.script_commands):
             for index in range(len(self.script_commands)):
                 try:
                     self.script_current_index = index
@@ -1094,6 +1092,9 @@ class DiabloWindowMonitor:
                     while self.script_paused and self.script_running:
                         print("脚本已暂停，等待恢复...")
                         time.sleep(0.1)
+                        
+                    if not self.script_running:
+                        break
 
                     # 判断是否为系统倒计时命令
                     if cmd["source"] == "系统倒计时":
@@ -1124,17 +1125,8 @@ class DiabloWindowMonitor:
             if not self.script_running:
                 break
 
-            # 非循环模式下执行完成，停止脚本并截图
-            # self.root.after(0, self._stop_script)
-            # self.root.after(
-            #     0,
-            #     lambda: self.script_status_label.config(
-            #         text="脚本状态：执行完成", foreground="purple"
-            #     ),
-            # )
             # 执行截图
             self.root.after(0, self._capture_main_window_screenshot)
-            # break
 
     def _stop_monitor(self):
         """停止监控并退出"""
