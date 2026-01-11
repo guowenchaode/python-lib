@@ -258,6 +258,14 @@ class DiabloWindowMonitor:
         )
         self.main_window_label.pack(side=tk.LEFT, padx=20)
 
+        self.main_window_abs_label = ttk.Label(
+            mouse_frame,
+            text="当前主程序：未选中",
+            font=CONFIG["normal_font"],
+            foreground="blue",
+        )
+        self.main_window_abs_label.pack(side=tk.LEFT, padx=20)
+
     def _init_status_label(self):
         self.status_label = ttk.Label(
             self.content_frame,  # 修改parent为content_frame
@@ -333,14 +341,16 @@ class DiabloWindowMonitor:
     def _on_window_double_click(self, target_title):
         if not target_title:
             return
-        
+
         """Handle double-click events on the window tree."""
         diablo_windows = self._get_diablo_windows()
         self.main_diablo_window = next(
             (win.window_obj for win in diablo_windows if win.title == target_title),
             None,
         )
+        self._update_main_window_info()
 
+    def _update_main_window_info(self):
         if self.main_diablo_window:
             self.main_window_title = self.main_diablo_window.title.strip()
             self.main_window_size = (
@@ -348,6 +358,9 @@ class DiabloWindowMonitor:
                 self.main_diablo_window.height,
             )
             self.main_window_label.config(text=f"当前主程序：{self.main_window_title}")
+            self.main_window_abs_label.config(
+                text=f"位置：{self.main_diablo_window.left}, {self.main_diablo_window.top}"
+            )
             self.script_frame.script_main_window_label.config(
                 text=f"主程序：{self.main_window_title}"
             )
@@ -466,6 +479,8 @@ class DiabloWindowMonitor:
             self.mouse_rel_label.config(
                 text=f"相对千分比：(X: {rel_x*1000:.0f}‰, Y: {rel_y*1000:.0f}‰)"
             )
+        
+        self._update_main_window_info()
 
     def _check_main_window_foreground(self) -> bool:
         if not self.main_diablo_window:
