@@ -604,223 +604,6 @@ class DiabloWindowMonitor:
         self.root.bind("<F12>", self._toggle_bubbles_visibility)
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
-    def _monitor_windows(self):
-        last_update_time = 0
-        while self.monitor_event.is_set():
-            current_time = time.time()
-            if current_time - last_update_time < CONFIG["monitor_window_interval"]:
-                time.sleep(0.05)
-                continue
-
-            try:
-                windows_info = self._get_diablo_windows()
-                self.root.after_idle(self._update_window_tree, windows_info)
-                self.root.after_idle(self._update_status_label)
-
-                if (
-                    self.script_running
-                    and self.stop_on_background
-                    and self.main_diablo_window
-                ):
-                    if not self._check_main_window_foreground():
-                        self.root.after_idle(self._stop_script)
-
-                if (
-                    self.bubbles_visible
-                    and self.script_commands
-                    and self.main_diablo_window
-                ):
-                    self.root.after_idle(self._create_bubbles_by_script_status)
-
-                last_update_time = current_time
-            except Exception as e:
-                print(f"窗口监控异常：{e}")
-                time.sleep(CONFIG["monitor_window_interval"])
-
-    def _monitor_mouse(self):
-        last_mouse_pos = (0, 0)
-        while self.monitor_event.is_set():
-            try:
-                mouse_x, mouse_y = pyautogui.position()
-                if (mouse_x, mouse_y) == last_mouse_pos:
-                    time.sleep(CONFIG["monitor_mouse_interval"])
-                    continue
-
-                rel_x_permil, rel_y_permil = "--", "--"
-                self.current_diablo_window = None
-
-                if self.main_diablo_window and self.main_window_size != (0, 0):
-                    win_left = self.main_diablo_window.left
-                    win_top = self.main_diablo_window.top
-                    win_w, win_h = self.main_window_size
-
-                    if (
-                        win_left <= mouse_x <= win_left + win_w
-                        and win_top <= mouse_y <= win_top + win_h
-                    ):
-                        rel_x_permil = round((mouse_x - win_left) / win_w, 3)
-                        rel_y_permil = round((mouse_y - win_top) / win_h, 3)
-                        self.current_diablo_window = self.main_diablo_window
-
-                self.root.after_idle(
-                    self._update_mouse_info,
-                    mouse_x,
-                    mouse_y,
-                    rel_x_permil,
-                    rel_y_permil,
-                )
-                last_mouse_pos = (mouse_x, mouse_y)
-                time.sleep(CONFIG["monitor_mouse_interval"])
-            except Exception as e:
-                print(f"鼠标监控异常：{e}")
-                time.sleep(CONFIG["monitor_mouse_interval"])
-
-    def _get_diablo_windows(self) -> List[DiabloWindowInfo]:
-        diablo_windows = []
-        try:
-            foreground_window = gw.getActiveWindow()
-            foreground_title = (
-                foreground_window.title.strip() if foreground_window else ""
-            )
-            self.is_diablo_foreground = False
-
-            for window in gw.getAllWindows():
-                window_title = window.title.strip()
-                if (
-                    "暗黑破坏神" in window_title
-                    and window.width > 0
-                    and window.height > 0
-                ):
-                    is_active = window.title == foreground_title
-                    if is_active:
-                        self.is_diablo_foreground = True
-
-                    win_info = DiabloWindowInfo(
-                        window_obj=window,
-                        title=window_title,
-                        pos=f"({window.left}, {window.top})",
-                        size=f"{window.width}x{window.height}",
-                        status="前台" if is_active else "后台",
-                        is_active=is_active,
-                    )
-                    diablo_windows.append(win_info)
-        except Exception as e:
-            self.root.after_idle(
-                messagebox.showerror, "错误", f"获取窗口信息失败：{str(e)}"
-            )
-        return diablo_windows
-
-    def _permil_to_absolute(self, x_permil: float, y_permil: float) -> Tuple[int, int]:
-        if not self.main_diablo_window or self.main_window_size == (0, 0):
-            return (0, 0)
-
-        win_left = self.main_diablo_window.left
-        win_top = self.main_diablo_window.top
-        win_w, win_h = self.main_window_size
-
-        abs_x = max(0, win_left + int(win_w * x_permil))
-        abs_y = max(0, win_top + int(win_h * y_permil))
-
-        return (abs_x, abs_y)
-
-    def _load_script(self):
-        if not self.main_diablo_window:
-            messagebox.showwarning("提示", "请先双击选中主程序窗口！")
-            return
-
-        file_path = filedialog.askopenfilename(
-            filetypes=[("CSV文件", "*.csv"), ("所有文件", "*.*")], title="加载脚本文件"
-        )
-        if not file_path:
-            return
-
-        self.script_file_path = file_path
-        self.script_commands.clear()
-        self.script_current_index = 0
-
-        try:
-            df = pd.read_csv(file_path, dtype=str).fillna("")
-            rows = df.to_dict(orient="records")
-
-            commands = []
-            for index in range(len(rows)):
-                row = rows[index]
-                key = row.get("按键", "").strip()
-                x = (
-                    float(row.get("千分比坐标X", 0.0)) / 1000
-                    if row.get("千分比坐标X")
-                    else 0.0
-                )
-                y = (
-                    float(row.get("千分比坐标Y", 0.0)) / 1000
-                    if row.get("千分比坐标Y")
-                    else 0.0
-                )
-                command = ScriptCommand(key=key, x=x, y=y)
-                commands.append(command)
-
-            self.script_commands = commands
-            self._add_countdown_commands()
-            self._update_script_tree()
-            self.start_script_btn.config(state=tk.NORMAL)
-            self.script_status_label.config(
-                text=f"脚本状态：已加载（{len(commands)}条命令）"
-            )
-
-        except Exception as e:
-            traceback.print_exc()
-            messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
-            self.script_status_label.config(text="脚本状态：加载失败")
-
-    def _update_script_tree(self):
-        for item in self.script_tree.get_children():
-            self.script_tree.delete(item)
-
-        for idx, cmd in enumerate(self.script_commands):
-            x_show = f"{cmd.x*1000:.0f}‰"
-            y_show = f"{cmd.y*1000:.0f}‰"
-            self.script_tree.insert(
-                "",
-                tk.END,
-                values=(
-                    idx + 1,
-                    cmd.key,
-                    f"{x_show}, {y_show}",
-                    cmd.status,
-                    cmd.source,
-                ),
-            )
-
-    def _capture_main_window_screenshot(self) -> Optional[str]:
-        if not self.main_diablo_window or not self.script_file_path:
-            return None
-
-        try:
-            script_dir = os.path.dirname(os.path.abspath(self.script_file_path))
-            cache_dir = os.path.join(script_dir, "cache")
-            os.makedirs(cache_dir, exist_ok=True)
-
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]
-            screenshot_filename = f"script_screenshot_{timestamp}.png"
-            screenshot_path = os.path.join(cache_dir, screenshot_filename)
-
-            win = self.main_diablo_window
-            region = (win.left, win.top, win.width, win.height)
-            if all(v > 0 for v in region):
-                screenshot = pyautogui.screenshot(region=region)
-            else:
-                screenshot = pyautogui.screenshot()
-
-            screenshot.save(screenshot_path)
-            print(f"截图已保存：{screenshot_path}")
-            return screenshot_path
-
-        except Exception as e:
-            error_msg = f"截图保存失败：{str(e)}"
-            print(error_msg)
-            self.root.after_idle(messagebox.showwarning, "截图提示", error_msg)
-            return None
-
     def _on_window_double_click(self, event):
         item = self.window_tree.identify_row(event.y)
         if not item:
@@ -1149,6 +932,56 @@ class DiabloWindowMonitor:
     def _on_window_close(self):
         self._stop_monitor_threads()
         self.root.quit()
+
+    def _load_script(self):
+        """Load a script file (CSV) and populate the script commands."""
+        file_path = filedialog.askopenfilename(
+            title="选择脚本文件",
+            filetypes=[("CSV Files", "*.csv"), ("All Files", "*")]
+        )
+
+        if not file_path:
+            return
+
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                reader = csv.DictReader(file)
+                self.script_commands = [
+                    ScriptCommand(
+                        key=row["按键"],
+                        x=float(row["X‰"]),
+                        y=float(row["Y‰"]),
+                        status="未执行",
+                        source="用户脚本",
+                    )
+                    for row in reader
+                ]
+
+            self.script_file_path = file_path
+            self.script_status_label.config(text=f"脚本状态：已加载 ({len(self.script_commands)} 条命令)")
+            self.start_script_btn.config(state=tk.NORMAL)
+            messagebox.showinfo("成功", "脚本加载成功！")
+        except Exception as e:
+            messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
+
+    def _get_diablo_windows(self):
+        """Retrieve a list of Diablo windows."""
+        try:
+            windows = gw.getWindowsWithTitle("Diablo")
+            return [
+                {
+                    "title": win.title.strip(),
+                    "left": win.left,
+                    "top": win.top,
+                    "width": win.width,
+                    "height": win.height,
+                }
+                for win in windows
+                if win.title.strip()
+            ]
+        except Exception as e:
+            messagebox.showerror("错误", f"获取暗黑窗口失败：{str(e)}")
+            return []
 
 
 # ===================== 程序入口 =====================
