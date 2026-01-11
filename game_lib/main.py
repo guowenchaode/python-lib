@@ -521,10 +521,10 @@ class DiabloWindowMonitor:
 
     def _stop_monitor_threads(self):
         self.monitor_event.clear()
-        if self.window_monitor_thread.is_alive():
-            self.window_monitor_thread.join(timeout=1)
-        if self.mouse_monitor_thread.is_alive():
-            self.mouse_monitor_thread.join(timeout=1)
+        if self.thread_manager.window_monitor_thread.is_alive():
+            self.thread_manager.window_monitor_thread.join(timeout=1)
+        if self.thread_manager.mouse_monitor_thread.is_alive():
+            self.thread_manager.mouse_monitor_thread.join(timeout=1)
 
     def _on_window_close(self):
         self._stop_monitor_threads()

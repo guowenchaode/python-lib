@@ -7,6 +7,7 @@ from tkinter import filedialog
 import pandas as pd
 import traceback
 from ui_components import BubbleWindow
+import threading
 
 
 class ScriptCommand:
@@ -265,14 +266,18 @@ class ScriptFrame:
         )
 
     def _start_script(self):
-        print("启动脚本")
-
         if self.script_running or not self.script_commands:
             return
 
-        self._initialize_script_executor()
-        self.script_running = True
-        self.script_executor.start()
+        def run_script():
+            self.script_running = True
+            self.script_executor = ScriptExecutor(
+                commands=self.script_commands,
+            )
+            self.script_executor.start()
+
+        # Start the script in a new thread
+        threading.Thread(target=run_script, daemon=True).start()
 
     def _pause_script(self):
         if self.script_executor:
