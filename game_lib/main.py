@@ -354,14 +354,26 @@ class DiabloWindowMonitor:
     def _update_main_window_info(self):
         if self.main_diablo_window:
             self.main_window_title = self.main_diablo_window.title.strip()
-            self.main_window_size = (
+
+            main_window_size = (
                 self.main_diablo_window.width,
                 self.main_diablo_window.height,
             )
-            self.main_window_location = (
+
+            main_window_location = (
                 self.main_diablo_window.left,
                 self.main_diablo_window.top,
             )
+
+            size_changed = main_window_size != self.main_window_size
+            location_changed = main_window_location != self.main_window_location
+
+            if not size_changed and not location_changed:
+                return
+
+            self.main_window_size = main_window_size
+            self.main_window_location = main_window_location
+
             self.main_window_label.config(text=f"当前主程序：{self.main_window_title}")
             self.main_window_abs_label.config(
                 text=f"位置：{self.main_diablo_window.left}, {self.main_diablo_window.top}"
@@ -374,7 +386,6 @@ class DiabloWindowMonitor:
                 self.window_tree_frame.window_tree.item(row, tags=("normal",))
 
             self.script_frame._update_script_tree()
-            # self.window_tree_frame.window_tree_frame.item(item, tags=("main",))
 
     def _on_key_press(self, event):
         if not self.main_diablo_window or not self.current_diablo_window:
