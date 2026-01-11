@@ -24,102 +24,9 @@ from record_frame import RecordFrame
 from script_frame import ScriptFrame
 from config_frame import ConfigFrame
 
-
-# ===================== 配置文件管理 ================h=====
-def load_settings(config_path: str = "settings.properties") -> Dict[str, Any]:
-    """加载配置文件，不存在则创建默认配置"""
-    config = configparser.ConfigParser()
-    default_config = {
-        "pyautogui_pause": "0.1",
-        "pyautogui_failsafe": "False",
-        "monitor_window_interval": "0.5",
-        "monitor_mouse_interval": "0.01",
-        "default_loop_interval": "15",
-        "bubble_alpha": "0.5",
-        "bubble_font": "微软雅黑,10,bold",
-        "title_font": "微软雅黑,14,bold",
-        "normal_font": "微软雅黑,10",
-        "highlight_bubble_color": "#ff4444",
-        "normal_bubble_color": "#4444ff",
-        "main_window_tag_color": "#e8f4f8",
-    }
-
-    if not os.path.exists(config_path):
-        config["SETTINGS"] = default_config
-        with open(config_path, "w", encoding="utf-8") as f:
-            config.write(f)
-        messagebox.showinfo("提示", f"未找到配置文件，已创建默认配置：{config_path}")
-        return default_config
-
-    try:
-        config.read(config_path, encoding="utf-8")
-        loaded_config = {}
-        for key, default_value in default_config.items():
-            loaded_config[key] = config.get("SETTINGS", key, fallback=default_value)
-
-        # 类型转换
-        loaded_config["pyautogui_pause"] = float(loaded_config["pyautogui_pause"])
-        loaded_config["pyautogui_failsafe"] = config.getboolean(
-            "SETTINGS", "pyautogui_failsafe", fallback=False
-        )
-        loaded_config["monitor_window_interval"] = float(
-            loaded_config["monitor_window_interval"]
-        )
-        loaded_config["monitor_mouse_interval"] = float(
-            loaded_config["monitor_mouse_interval"]
-        )
-        loaded_config["default_loop_interval"] = int(
-            loaded_config["default_loop_interval"]
-        )
-        loaded_config["bubble_alpha"] = float(loaded_config["bubble_alpha"])
-
-        # 字体格式转换
-        for font_key in ["bubble_font", "title_font", "normal_font"]:
-            font_parts = loaded_config[font_key].split(",")
-            font_name = font_parts[0]
-            font_size = int(font_parts[1]) if len(font_parts) > 1 else 10
-            font_weight = font_parts[2] if len(font_parts) > 2 else ""
-            loaded_config[font_key] = (
-                (font_name, font_size, font_weight)
-                if font_weight
-                else (font_name, font_size)
-            )
-
-        return loaded_config
-    except Exception as e:
-        traceback.print_exc()  # Print the full stack trace to the console
-        messagebox.showerror("配置加载错误", f"配置文件读取失败，使用默认配置：{str(e)}")
-        return default_config
-
-
-def export_settings(
-    config_dict: Dict[str, Any], config_path: str = "settings.properties"
-):
-    """导出当前配置到文件"""
-    config = configparser.ConfigParser()
-    export_dict = {}
-
-    for key, value in config_dict.items():
-        if isinstance(value, tuple) and all(isinstance(x, (str, int)) for x in value):
-            export_dict[key] = ",".join(map(str, value))
-        elif isinstance(value, (int, float, bool, str)):
-            export_dict[key] = str(value)
-        else:
-            export_dict[key] = str(value)
-
-    config["SETTINGS"] = export_dict
-
-    try:
-        with open(config_path, "w", encoding="utf-8") as f:
-            config.write(f)
-        messagebox.showinfo("成功", f"配置已导出到：{os.path.abspath(config_path)}")
-    except Exception as e:
-        traceback.print_exc()
-        messagebox.showerror("导出失败", f"配置导出失败：{str(e)}")
-
-
 # ===================== 全局配置 =====================
 from config_manager import CONFIG
+
 pyautogui.FAILSAFE = CONFIG["pyautogui_failsafe"]
 pyautogui.PAUSE = CONFIG["pyautogui_pause"]
 
@@ -211,7 +118,9 @@ class DiabloWindowMonitor:
             width=1110,  # Reduced width by 50
             height=780,
         )
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=25)  # Center-align with padding
+        self.canvas.pack(
+            side=tk.LEFT, fill=tk.BOTH, expand=True, padx=25
+        )  # Center-align with padding
 
         # 3. 绑定滚动条与画布
         self.v_scrollbar.config(command=self.canvas.yview)
@@ -285,6 +194,7 @@ class DiabloWindowMonitor:
         )
 
         self.thread_manager.start_threads()
+        self._on_window_double_click(CONFIG["main_diablo_window"])
 
     # ========== 核心修改2：鼠标滚轮滚动事件 ==========
     def _on_mouse_wheel(self, event):
@@ -367,24 +277,18 @@ class DiabloWindowMonitor:
             self.content_frame,
             self._export_records,
             self._import_records,
-            self._clear_records
+            self._clear_records,
         )
 
     def _init_script_frame(self):
-        self.script_frame = ScriptFrame(
-            self.content_frame,
-            self.root
-        )
+        self.script_frame = ScriptFrame(self.content_frame, self)
 
         # Delegate ScriptFrame methods
         self._start_script = self.script_frame._start_script
         self._update_script_tree = self.script_frame._update_script_tree
 
     def _init_config_frame(self):
-        self.config_frame = ConfigFrame(
-            self.content_frame,
-            self._reload_config
-        )
+        self.config_frame = ConfigFrame(self.content_frame, self._reload_config)
 
     def _init_exit_frame(self):
         exit_frame = ttk.Frame(self.content_frame)
@@ -427,10 +331,10 @@ class DiabloWindowMonitor:
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
     def _on_window_double_click(self, target_title):
-        """Handle double-click events on the window tree."""
-        if not hasattr(self.window_tree_frame, 'window_tree'):
+        if not target_title:
             return
-
+        
+        """Handle double-click events on the window tree."""
         diablo_windows = self._get_diablo_windows()
         self.main_diablo_window = next(
             (win.window_obj for win in diablo_windows if win.title == target_title),
@@ -577,7 +481,7 @@ class DiabloWindowMonitor:
             return False
 
     def _stop_monitor(self):
-        if messagebox.askyesno("确认", "是否确定停止监控并退出？"):  
+        if messagebox.askyesno("确认", "是否确定停止监控并退出？"):
             self._stop_monitor_threads()
             self.root.quit()
             self.root.destroy()
@@ -613,6 +517,7 @@ class DiabloWindowMonitor:
         except Exception as e:
             messagebox.showerror("错误", f"获取暗黑窗口失败：{str(e)}")
             return []
+
 
 # ===================== 程序入口 =====================
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ import configparser
 import os
 from tkinter import messagebox
 
+
 def load_settings(config_path: str = "settings.properties") -> dict:
     """Load configuration file, create default if missing."""
     config = configparser.ConfigParser()
@@ -18,6 +19,8 @@ def load_settings(config_path: str = "settings.properties") -> dict:
         "highlight_bubble_color": "#ff4444",
         "normal_bubble_color": "#4444ff",
         "main_window_tag_color": "#e8f4f8",
+        "main_diablo_window": "暗黑破坏神：不朽",
+        "script_file_path": "C:\\Users\\Alex\\Desktop\\暗黑脚本\\回收装备战斗.csv",
     }
 
     if not os.path.exists(config_path):
@@ -68,6 +71,7 @@ def load_settings(config_path: str = "settings.properties") -> dict:
         )
         return default_config
 
+
 def export_settings(config_dict: dict, config_path: str = "settings.properties"):
     """Export current configuration to file."""
     config = configparser.ConfigParser()
@@ -89,10 +93,8 @@ def export_settings(config_dict: dict, config_path: str = "settings.properties")
         messagebox.showinfo("成功", f"配置已导出到：{os.path.abspath(config_path)}")
     except Exception as e:
         messagebox.showerror("导出失败", f"配置导出失败：{str(e)}")
-        
-        
-        
+
+
 # ===================== 全局配置 =====================
 config_path = r"C:\Users\Alex\Desktop\暗黑脚本\settings.properties"
 CONFIG = load_settings(config_path)
-

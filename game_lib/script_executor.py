@@ -5,6 +5,7 @@ from tkinter import messagebox
 from typing import List
 from data_models import ScriptCommand
 
+
 class ScriptExecutor:
     def __init__(self, commands: List[ScriptCommand], config: dict, ui_callbacks: dict):
         self.commands = commands
@@ -38,26 +39,34 @@ class ScriptExecutor:
                         break
 
                 cmd = self.commands[self.current_index]
-                if cmd.source != "系统倒计时":
-                    abs_x, abs_y = self.ui_callbacks["permil_to_absolute"](cmd.x, cmd.y)
-                    if self.ui_callbacks["check_foreground"]():
-                        pyautogui.click(abs_x, abs_y)
-                        pyautogui.press(cmd.key)
-                        cmd.status = "已执行"
+
+                try:
+                    if cmd.source != "系统倒计时":
+                        abs_x, abs_y = self.ui_callbacks["permil_to_absolute"](
+                            cmd.x, cmd.y
+                        )
+                        if self.ui_callbacks["check_foreground"]():
+                            pyautogui.click(abs_x, abs_y)
+                            # pyautogui.press(cmd.key)
+                            cmd.status = "已执行"
+                        else:
+                            cmd.status = "主程序后台，跳过"
                     else:
-                        cmd.status = "主程序后台，跳过"
-                else:
-                    cmd.status = "已执行"
-                    self.ui_callbacks["update_status"](f"脚本状态：{cmd.key}")
+                        cmd.status = "已执行"
+                        self.ui_callbacks["update_status"](f"脚本状态：{cmd.key}")
+                        time.sleep(1)
+                except Exception as e:
+                    traceback.print_exc()
+                finally:
+                    if not self.running:
+                        break
+
+                    self.ui_callbacks["update_tree"]()
+                    self.current_index += 1
+
+                    if self.ui_callbacks["bubbles_visible"]():
+                        self.ui_callbacks["update_bubbles"]()
                     time.sleep(1)
-
-                self.ui_callbacks["update_tree"]()
-                self.current_index += 1
-
-                if self.ui_callbacks["bubbles_visible"]():
-                    self.ui_callbacks["update_bubbles"]()
-
-                time.sleep(pyautogui.PAUSE)
 
         except Exception as e:
             error_msg = f"脚本执行异常：{str(e)}"

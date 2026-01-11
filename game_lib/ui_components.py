@@ -3,6 +3,7 @@ from tkinter import ttk
 from typing import Tuple
 from config_manager import CONFIG
 
+
 class BubbleWindow:
     def __init__(
         self,
@@ -37,10 +38,8 @@ class BubbleWindow:
         )
         label.pack()
 
-        screen_width = parent.winfo_screenwidth()
-        screen_height = parent.winfo_screenheight()
-        final_x = min(x + 10, screen_width - 100)
-        final_y = min(y, screen_height - 50)
+        final_x = x + 10
+        final_y = y + 10
         self.window.geometry(f"+{final_x}+{final_y}")
 
     def destroy(self):

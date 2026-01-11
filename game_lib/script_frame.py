@@ -45,7 +45,7 @@ class ScriptFrame:
         self.script_main_window_label.pack(side=tk.LEFT, padx=5)
 
         self.load_script_btn = ttk.Button(
-            script_ctrl_frame, text="加载CSV脚本", command=self._load_script
+            script_ctrl_frame, text="加载CSV脚本", command=self.open_file_dialog
         )
         self.start_script_btn = ttk.Button(
             script_ctrl_frame,
@@ -142,7 +142,7 @@ class ScriptFrame:
         script_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.script_commands = []
-        self.script_file_path = ""
+        self.script_file_path = CONFIG.get("script_file_path")
 
         # 气泡相关属性
         self.bubbles_visible = True
@@ -150,6 +150,8 @@ class ScriptFrame:
         self.highlighted_bubble = None
         self.main_diablo_window = None
         self.main_window_size = (0, 0)
+
+        self._load_script()
 
     def _set_loop_interval(self):
         try:
@@ -187,7 +189,7 @@ class ScriptFrame:
                 if cmd.source != "系统倒计时":
                     abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
                     self.highlighted_bubble = BubbleWindow(
-                        self.root,
+                        self.root.root,
                         abs_x,
                         abs_y,
                         next_idx + 1,
@@ -202,18 +204,26 @@ class ScriptFrame:
                 if cmd.source == "系统倒计时":
                     continue
                 abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
-                bubble = BubbleWindow(self.root, abs_x, abs_y, idx + 1, cmd.key)
+                bubble = BubbleWindow(self.root.root, abs_x, abs_y, idx + 1, cmd.key)
                 bubbles.append(bubble)
             self.bubble_windows = bubbles
 
+    def open_file_dialog(self):
+        file_path = filedialog.askopenfilename(
+            title="选择脚本文件",
+            filetypes=[("CSV Files", "*.csv"), ("All Files", "*")],
+        )
+        self.script_file_path = file_path
+        self._load_script()
+
     def _load_script(self):
         """Load a script file (CSV) and populate the script commands using pandas."""
-        file_path = filedialog.askopenfilename(
-            title="选择脚本文件", filetypes=[("CSV Files", "*.csv"), ("All Files", "*")]
-        )
+        file_path = self.script_file_path
 
         if not file_path:
             return
+
+        CONFIG["script_file_path"] = file_path
 
         try:
             df = pd.read_csv(file_path, encoding="utf-8")
@@ -234,7 +244,7 @@ class ScriptFrame:
                 text=f"脚本状态：已加载 ({len(self.script_commands)} 条命令)"
             )
             self.start_script_btn.config(state=tk.NORMAL)
-            messagebox.showinfo("成功", "脚本加载成功！")
+            # messagebox.showinfo("成功", "脚本加载成功！")
         except Exception as e:
             traceback.print_exc()
             messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
@@ -278,22 +288,20 @@ class ScriptFrame:
             self.script_running = False
 
     def _update_script_tree(self):
-        if not hasattr(self, "script_tree"):
-            return
-
         # Clear existing items
         for item in self.script_tree.get_children():
             self.script_tree.delete(item)
 
         # Add updated script commands
         for idx, command in enumerate(self.script_commands):
+            abs_x, abs_y = self._permil_to_absolute(command.x, command.y)
             self.script_tree.insert(
                 "",
                 "end",
                 values=(
                     idx + 1,
                     command.key,
-                    f"{command.x * 1000:.0f}‰, {command.y * 1000:.0f}‰",
+                    f"{command.x * 1000:.0f}‰, {command.y * 1000:.0f}‰  ({abs_x}, {abs_y})",
                     command.status,
                     command.source,
                 ),
@@ -323,11 +331,11 @@ class ScriptFrame:
         self.script_status_label.config(text=status_text)
 
     def _permil_to_absolute(self, x_permil, y_permil):
-        if not self.script_commands or not self.script_commands[0]:
+        if not self.root.main_diablo_window or not x_permil or not y_permil:
             return 0, 0
 
-        abs_x = int(x_permil * 1000)
-        abs_y = int(y_permil * 1000)
+        abs_x = self.root.main_diablo_window.left + int(x_permil * 1000)
+        abs_y = self.root.main_diablo_window.top + int(y_permil * 1000)
         return abs_x, abs_y
 
     def _check_main_window_foreground(self):
