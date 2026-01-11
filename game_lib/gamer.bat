@@ -1,1 +1,1 @@
-call python -u D:\Git\github\python-lib\game_lib\black_forever.py
+call python -u D:\Git\github\python-lib\game_lib\main.py

@@ -19,6 +19,49 @@ class ScriptExecutor:
         self.loop = True
         self.loop_interval = config.get("default_loop_interval", 15)
 
+    def execute_next(self):
+        try:
+            cmd = self.commands[self.current_index]
+            print(
+                f"[{self.current_loop_count}] 脚本执行循环中... 当前索引：{self.current_index + 1} / {len(self.commands)}, 命令：{cmd.key}"
+            )
+            action = cmd.action
+
+            if action == "click":
+                abs_x, abs_y = self.ui_callbacks["permil_to_absolute"](cmd.x, cmd.y)
+                if self.ui_callbacks["check_foreground"]():
+                    pyautogui.click(abs_x, abs_y)
+                    # pyautogui.press(cmd.key)
+                    cmd.status = "已执行"
+                else:
+                    cmd.status = "主程序后台，跳过"
+            else:
+                cmd.status = "已执行"
+                self.ui_callbacks["update_status"](f"脚本状态：{cmd.key}")
+        except Exception as e:
+            traceback.print_exc()
+        finally:
+            self.current_index += 1
+            time.sleep(1)
+
+    def wait_next_loop(self):
+        print(f"[{self.current_loop_count}] 脚本循环结束，等待下一轮开始...")
+        self.ui_callbacks["on_loop_end"]()
+
+        left = int(self.loop_interval)
+
+        while left > 0 and self.running:
+            print(f"[{self.current_loop_count}] 下一轮脚本将在 {left} 秒后开始...")
+            time.sleep(1)
+            left -= 1
+
+        self.current_index = 0
+
+    def check_status(self):
+        while self.paused and self.running:
+            print("脚本暂停中...")
+            time.sleep(1)
+
     def start(self):
         if self.running or not self.commands:
             return
@@ -32,60 +75,17 @@ class ScriptExecutor:
         try:
             while self.running:
                 try:
-                    while self.paused and self.running:
-                        print("脚本暂停中...")
-                        time.sleep(1)
-
-                    if self.current_index >= len(self.commands):
-                        print("脚本循环结束，等待下一轮开始...")
-                        self.current_index = 0
-                        self.ui_callbacks["on_loop_end"]()
-
-                        left = int(CONFIG["default_loop_interval"])
-
-                        while left > 0 and self.running:
-                            print(f"下一轮脚本将在 {left} 秒后开始...")
-                            time.sleep(1)
-                            left -= 1
+                    self.check_status()
 
                     self.current_loop_count += 1
 
-                    cmd = self.commands[self.current_index]
-                    print(
-                        f"脚本执行循环中... 当前索引：{self.current_index + 1} / {command_count}, 命令：{cmd}"
-                    )
-                    action = cmd.action
-
-                    try:
-                        if action == "click":
-                            abs_x, abs_y = self.ui_callbacks["permil_to_absolute"](
-                                cmd.x, cmd.y
-                            )
-                            if self.ui_callbacks["check_foreground"]():
-                                pyautogui.click(abs_x, abs_y)
-                                # pyautogui.press(cmd.key)
-                                cmd.status = "已执行"
-                            else:
-                                cmd.status = "主程序后台，跳过"
-                        else:
-                            cmd.status = "已执行"
-                            self.ui_callbacks["update_status"](f"脚本状态：{cmd.key}")
-                    except Exception as e:
-                        traceback.print_exc()
-                    finally:
-                        if not self.running:
-                            break
-                        # self.ui_callbacks["update_tree"]()
-                        self.current_index += 1
-
-                        # if self.ui_callbacks["bubbles_visible"]():
-                        #     self.ui_callbacks["update_bubbles"]()
-                        time.sleep(1)
+                    if self.current_index >= 0 and self.current_index < command_count:
+                        self.execute_next()
+                    else:
+                        self.wait_next_loop()
                 except Exception as e:
                     print(f"脚本执行异常：{str(e)}")
                     traceback.print_exc()
-                    messagebox.showerror("脚本错误", f"脚本执行异常：{str(e)}")
-                    self.stop()
         except Exception as e:
             error_msg = f"脚本执行异常：{str(e)}"
             print(error_msg)
