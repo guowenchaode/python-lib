@@ -89,3 +89,10 @@ def export_settings(config_dict: dict, config_path: str = "settings.properties")
         messagebox.showinfo("成功", f"配置已导出到：{os.path.abspath(config_path)}")
     except Exception as e:
         messagebox.showerror("导出失败", f"配置导出失败：{str(e)}")
+        
+        
+        
+# ===================== 全局配置 =====================
+config_path = r"C:\Users\Alex\Desktop\暗黑脚本\settings.properties"
+CONFIG = load_settings(config_path)
+

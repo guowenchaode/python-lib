@@ -16,10 +16,14 @@ from thread_manager import ThreadManager
 import threading
 
 # Import refactored modules
-from config_manager import load_settings, export_settings
+from config_frame import load_settings, export_settings
 from data_models import ScriptCommand, DiabloWindowInfo
 from ui_components import BubbleWindow
 from script_executor import ScriptExecutor
+from window_tree_frame import WindowTreeFrame
+from record_frame import RecordFrame
+from script_frame import ScriptFrame
+from config_frame import ConfigFrame
 
 
 # ===================== 配置文件管理 =====================
@@ -84,9 +88,8 @@ def load_settings(config_path: str = "settings.properties") -> Dict[str, Any]:
 
         return loaded_config
     except Exception as e:
-        messagebox.showerror(
-            "配置加载错误", f"配置文件读取失败，使用默认配置：{str(e)}"
-        )
+        traceback.print_exc()  # Print the full stack trace to the console
+        messagebox.showerror("配置加载错误", f"配置文件读取失败，使用默认配置：{str(e)}")
         return default_config
 
 
@@ -112,12 +115,12 @@ def export_settings(
             config.write(f)
         messagebox.showinfo("成功", f"配置已导出到：{os.path.abspath(config_path)}")
     except Exception as e:
+        traceback.print_exc()
         messagebox.showerror("导出失败", f"配置导出失败：{str(e)}")
 
 
 # ===================== 全局配置 =====================
-config_path = r"C:\Users\Alex\Desktop\暗黑脚本\settings.properties"
-CONFIG = load_settings(config_path)
+from config_manager import CONFIG
 pyautogui.FAILSAFE = CONFIG["pyautogui_failsafe"]
 pyautogui.PAUSE = CONFIG["pyautogui_pause"]
 
@@ -206,10 +209,10 @@ class DiabloWindowMonitor:
         self.canvas = tk.Canvas(
             self.root,
             yscrollcommand=self.v_scrollbar.set,
-            width=1160,  # 主窗口宽度 - 滚动条宽度
+            width=1110,  # Reduced width by 50
             height=780,
         )
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=25)  # Center-align with padding
 
         # 3. 绑定滚动条与画布
         self.v_scrollbar.config(command=self.canvas.yview)
@@ -355,215 +358,44 @@ class DiabloWindowMonitor:
         self.status_label.pack(pady=5, padx=20)
 
     def _init_window_tree_frame(self):
-        window_frame = ttk.LabelFrame(
-            self.content_frame,  # 修改parent为content_frame
-            text="暗黑窗口信息（双击选中主程序）",
-            padding=10,
+        self.window_tree_frame = WindowTreeFrame(
+            self.content_frame, self._on_window_double_click
         )
-        window_frame.pack(fill=tk.X, padx=20, pady=5)
-
-        window_tree_style = ttk.Style()
-        window_tree_style.configure("Treeview", font=CONFIG["normal_font"])
-        window_tree_style.configure("Treeview.Heading", font=("微软雅黑", 10, "bold"))
-        window_tree_style.configure(
-            "main.Treeview", background=CONFIG["main_window_tag_color"]
-        )
-
-        self.window_tree = ttk.Treeview(
-            window_frame,
-            columns=("标题", "位置", "大小", "状态"),
-            show="headings",
-            height=3,
-        )
-        columns_config = {"标题": 300, "位置": 120, "大小": 120, "状态": 100}
-        for col, width in columns_config.items():
-            self.window_tree.heading(col, text=col)
-            self.window_tree.column(col, width=width)
-
-        self.window_tree.pack(fill=tk.X)
-        self.window_tree.bind("<Double-1>", self._on_window_double_click)
+        self.update_window_tree = self.window_tree_frame.update_window_tree
 
     def _init_record_frame(self):
-        record_frame = ttk.LabelFrame(
-            self.content_frame,  # 修改parent为content_frame
-            text="按键-千分比坐标记录",
-            padding=10,
+        self.record_frame = RecordFrame(
+            self.content_frame,
+            self._export_records,
+            self._import_records,
+            self._clear_records
         )
-        record_frame.pack(fill=tk.X, padx=20, pady=5)
-
-        record_tree_style = ttk.Style()
-        record_tree_style.configure("Record.Treeview", font=CONFIG["normal_font"])
-        record_tree_style.configure(
-            "Record.Treeview.Heading", font=("微软雅黑", 10, "bold")
-        )
-
-        self.record_tree = ttk.Treeview(
-            record_frame,
-            columns=("按键", "千分比坐标"),
-            show="headings",
-            style="Record.Treeview",
-            height=5,
-        )
-        self.record_tree.heading("按键", text="按键")
-        self.record_tree.heading("千分比坐标", text="主程序千分比坐标(X‰, Y‰)")
-        self.record_tree.column("按键", width=100)
-        self.record_tree.column("千分比坐标", width=200)
-        self.record_tree.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        record_btn_frame = ttk.Frame(record_frame)
-        record_btn_frame.pack(side=tk.RIGHT, padx=10)
-
-        self.export_btn = ttk.Button(
-            record_btn_frame, text="导出记录(CSV)", command=self._export_records
-        )
-        self.import_btn = ttk.Button(
-            record_btn_frame, text="导入记录(CSV)", command=self._import_records
-        )
-        self.clear_btn = ttk.Button(
-            record_btn_frame, text="清空记录", command=self._clear_records
-        )
-
-        for btn in [self.export_btn, self.import_btn, self.clear_btn]:
-            btn.pack(pady=5, fill=tk.X)
 
     def _init_script_frame(self):
-        script_frame = ttk.LabelFrame(
-            self.content_frame,  # 修改parent为content_frame
-            text="脚本执行模块（千分比坐标）",
-            padding=10,
+        self.script_frame = ScriptFrame(
+            self.content_frame,
+            self._load_script,
+            self._start_script,
+            self._pause_script,
+            self._stop_script,
+            self._toggle_bubbles_visibility,
+            self._set_loop_interval,
+            self._permil_to_absolute,
+            self._check_main_window_foreground,
+            self._create_bubbles_by_script_status,
+            self._update_script_tree,
+            self._update_status_label,
+            self.script_commands,
+            self.script_running,
+            self.stop_on_background,
+            self.loop_interval,
         )
-        script_frame.pack(fill=tk.BOTH, padx=20, pady=5, expand=True)
-
-        script_ctrl_frame = ttk.Frame(script_frame)
-        script_ctrl_frame.pack(fill=tk.X, pady=5)
-
-        self.script_main_window_label = ttk.Label(
-            script_ctrl_frame,
-            text="主程序：未选中",
-            font=("微软雅黑", 10, "bold"),
-            foreground="red",
-        )
-        self.script_main_window_label.pack(side=tk.LEFT, padx=5)
-
-        self.load_script_btn = ttk.Button(
-            script_ctrl_frame, text="加载CSV脚本", command=self._load_script
-        )
-        self.start_script_btn = ttk.Button(
-            script_ctrl_frame,
-            text="启动脚本",
-            command=self._start_script,
-            state=tk.DISABLED,
-        )
-        self.pause_script_btn = ttk.Button(
-            script_ctrl_frame,
-            text="暂停脚本",
-            command=self._pause_script,
-            state=tk.DISABLED,
-        )
-        self.stop_script_btn = ttk.Button(
-            script_ctrl_frame,
-            text="停止脚本",
-            command=self._stop_script,
-            state=tk.DISABLED,
-        )
-        self.toggle_bubble_btn = ttk.Button(
-            script_ctrl_frame, text="隐藏气泡", command=self._toggle_bubbles_visibility
-        )
-
-        for btn in [
-            self.load_script_btn,
-            self.start_script_btn,
-            self.pause_script_btn,
-            self.stop_script_btn,
-            self.toggle_bubble_btn,
-        ]:
-            btn.pack(side=tk.LEFT, padx=5)
-
-        self.stop_on_background_var = tk.BooleanVar(value=self.stop_on_background)
-        self.stop_on_background_check = ttk.Checkbutton(
-            script_ctrl_frame,
-            text="主程序后台时自动停止脚本",
-            variable=self.stop_on_background_var,
-            command=lambda: setattr(
-                self, "stop_on_background", self.stop_on_background_var.get()
-            ),
-        )
-        self.stop_on_background_check.pack(side=tk.LEFT, padx=10)
-
-        self.loop_var = tk.BooleanVar(value=True)
-        self.loop_check = ttk.Checkbutton(
-            script_ctrl_frame,
-            text="循环执行",
-            variable=self.loop_var,
-            command=lambda: setattr(self, "script_loop", self.loop_var.get()),
-        )
-        self.loop_check.pack(side=tk.LEFT, padx=10)
-
-        ttk.Label(
-            script_ctrl_frame, text="循环间隔(秒)：", font=CONFIG["normal_font"]
-        ).pack(side=tk.LEFT, padx=5)
-        self.interval_entry = ttk.Entry(
-            script_ctrl_frame, width=8, font=CONFIG["normal_font"]
-        )
-        self.interval_entry.insert(0, str(self.loop_interval))
-        self.interval_entry.pack(side=tk.LEFT, padx=5)
-
-        self.set_interval_btn = ttk.Button(
-            script_ctrl_frame, text="确认", command=self._set_loop_interval
-        )
-        self.set_interval_btn.pack(side=tk.LEFT, padx=5)
-
-        self.script_status_label = ttk.Label(
-            script_ctrl_frame, text="脚本状态：未加载", font=CONFIG["normal_font"]
-        )
-        self.script_status_label.pack(side=tk.RIGHT, padx=10)
-
-        self.script_tree = ttk.Treeview(
-            script_frame,
-            columns=("序号", "按键", "千分比坐标", "状态", "命令来源"),
-            show="headings",
-            height=8,
-        )
-        script_columns = {
-            "序号": 60,
-            "按键": 80,
-            "千分比坐标": 200,
-            "状态": 100,
-            "命令来源": 120,
-        }
-        for col, width in script_columns.items():
-            self.script_tree.heading(col, text=col)
-            self.script_tree.column(col, width=width)
-
-        script_scroll = ttk.Scrollbar(
-            script_frame, orient=tk.VERTICAL, command=self.script_tree.yview
-        )
-        self.script_tree.configure(yscrollcommand=script_scroll.set)
-        self.script_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        script_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
     def _init_config_frame(self):
-        config_frame = ttk.LabelFrame(self.content_frame, text="配置管理", padding=10)
-        config_frame.pack(fill=tk.X, padx=20, pady=5)
-
-        export_config_btn = ttk.Button(
-            config_frame,
-            text="导出当前配置到settings.properties",
-            command=lambda: export_settings(CONFIG),
+        self.config_frame = ConfigFrame(
+            self.content_frame,
+            self._reload_config
         )
-        export_config_btn.pack(side=tk.LEFT, padx=5)
-
-        reload_config_btn = ttk.Button(
-            config_frame, text="重新加载配置文件", command=self._reload_config
-        )
-        reload_config_btn.pack(side=tk.LEFT, padx=5)
-
-        config_path_label = ttk.Label(
-            config_frame,
-            text=f"当前配置文件：{os.path.abspath(config_path)}",
-            font=CONFIG["normal_font"],
-        )
-        config_path_label.pack(side=tk.LEFT, padx=20)
 
     def _init_exit_frame(self):
         exit_frame = ttk.Frame(self.content_frame)
@@ -593,6 +425,7 @@ class DiabloWindowMonitor:
                 "成功", "配置文件已重新加载！\n部分配置需要重启程序生效"
             )
         except Exception as e:
+            traceback.print_exc()
             messagebox.showerror("失败", f"重新加载配置失败：{str(e)}")
 
     def _bind_events(self):
@@ -605,11 +438,11 @@ class DiabloWindowMonitor:
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
     def _on_window_double_click(self, event):
-        item = self.window_tree.identify_row(event.y)
+        item = self.window_tree_frame.tree.identify_row(event.y)
         if not item:
             return
 
-        values = self.window_tree.item(item, "values")
+        values = self.window_tree_frame.tree.item(item, "values")
         if not values or values[0] == "未检测到暗黑破坏神窗口":
             return
 
@@ -631,9 +464,9 @@ class DiabloWindowMonitor:
                 text=f"主程序：{self.main_window_title}"
             )
 
-            for row in self.window_tree.get_children():
-                self.window_tree.item(row, tags=("normal",))
-            self.window_tree.item(item, tags=("main",))
+            for row in self.window_tree_frame.tree.get_children():
+                self.window_tree_frame.tree.item(row, tags=("normal",))
+            self.window_tree_frame.tree.item(item, tags=("main",))
             self._create_bubbles_by_script_status()
 
     def _toggle_bubbles_visibility(self, event=None):
@@ -839,6 +672,7 @@ class DiabloWindowMonitor:
                     writer.writerow([key, x * 1000, y * 1000])
             messagebox.showinfo("成功", f"记录已导出到：{os.path.abspath(file_path)}")
         except Exception as e:
+            traceback.print_exc()
             messagebox.showerror("失败", f"导出失败：{str(e)}")
 
     def _import_records(self):
@@ -861,6 +695,7 @@ class DiabloWindowMonitor:
             self._update_record_tree()
             messagebox.showinfo("成功", f"成功导入{len(self.key_pos_records)}条记录")
         except Exception as e:
+            traceback.print_exc()
             messagebox.showerror("失败", f"导入失败：{str(e)}")
 
     def _clear_records(self):
@@ -869,21 +704,7 @@ class DiabloWindowMonitor:
             self._update_record_tree()
 
     def _update_window_tree(self, windows_info: List[DiabloWindowInfo]):
-        for item in self.window_tree.get_children():
-            self.window_tree.delete(item)
-
-        if not windows_info:
-            self.window_tree.insert(
-                "", tk.END, values=("未检测到暗黑破坏神窗口", "", "", "")
-            )
-            return
-
-        for win_info in windows_info:
-            self.window_tree.insert(
-                "",
-                tk.END,
-                values=(win_info.title, win_info.pos, win_info.size, win_info.status),
-            )
+        self.window_tree_frame.update_window_tree(windows_info)
 
     def _update_status_label(self):
         status_text = (
@@ -934,7 +755,7 @@ class DiabloWindowMonitor:
         self.root.quit()
 
     def _load_script(self):
-        """Load a script file (CSV) and populate the script commands."""
+        """Load a script file (CSV) and populate the script commands using pandas."""
         file_path = filedialog.askopenfilename(
             title="选择脚本文件",
             filetypes=[("CSV Files", "*.csv"), ("All Files", "*")]
@@ -944,24 +765,25 @@ class DiabloWindowMonitor:
             return
 
         try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                reader = csv.DictReader(file)
-                self.script_commands = [
-                    ScriptCommand(
-                        key=row["按键"],
-                        x=float(row["X‰"]),
-                        y=float(row["Y‰"]),
-                        status="未执行",
-                        source="用户脚本",
-                    )
-                    for row in reader
-                ]
+            df = pd.read_csv(file_path, encoding="utf-8")
+            records = df.to_dict(orient="records")
+            self.script_commands = [
+                ScriptCommand(
+                    key=row.get("key", ""),
+                    x=float(row.get("x", 0)),
+                    y=float(row.get("y", 0)),
+                    status="未执行",
+                    source="用户脚本",
+                )
+                for row in records
+            ]
 
             self.script_file_path = file_path
             self.script_status_label.config(text=f"脚本状态：已加载 ({len(self.script_commands)} 条命令)")
             self.start_script_btn.config(state=tk.NORMAL)
             messagebox.showinfo("成功", "脚本加载成功！")
         except Exception as e:
+            traceback.print_exc()
             messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
 
     def _get_diablo_windows(self):
@@ -984,6 +806,38 @@ class DiabloWindowMonitor:
         except Exception as e:
             messagebox.showerror("错误", f"获取暗黑窗口失败：{str(e)}")
             return []
+
+    def _permil_to_absolute(self, x_permil, y_permil):
+        """Convert permil (‰) coordinates to absolute screen coordinates."""
+        if not self.main_diablo_window or self.main_window_size == (0, 0):
+            return 0, 0
+
+        abs_x = self.main_diablo_window.left + int(x_permil * self.main_window_size[0])
+        abs_y = self.main_diablo_window.top + int(y_permil * self.main_window_size[1])
+        return abs_x, abs_y
+
+    def _update_script_tree(self):
+        """Update the script tree view with the current script commands."""
+        if not hasattr(self, 'script_tree'):
+            return
+
+        # Clear existing items
+        for item in self.script_tree.get_children():
+            self.script_tree.delete(item)
+
+        # Add updated script commands
+        for idx, command in enumerate(self.script_commands):
+            self.script_tree.insert(
+                "",
+                "end",
+                values=(
+                    idx + 1,
+                    command.key,
+                    f"{command.x * 1000:.0f}‰, {command.y * 1000:.0f}‰",
+                    command.status,
+                    command.source,
+                ),
+            )
 
 
 # ===================== 程序入口 =====================
