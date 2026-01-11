@@ -437,21 +437,12 @@ class DiabloWindowMonitor:
         self.root.bind("<F12>", self._toggle_bubbles_visibility)
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
-    def _on_window_double_click(self, event):
+    def _on_window_double_click(self, target_title):
         """Handle double-click events on the window tree."""
-        if not hasattr(self.window_tree_frame, 'tree'):
-            return
-
-        item = self.window_tree_frame.tree.identify_row(event.y)
-        if not item:
-            return
-
-        values = self.window_tree_frame.tree.item(item, "values")
-        if not values or values[0] == "未检测到暗黑破坏神窗口":
+        if not hasattr(self.window_tree_frame, 'window_tree'):
             return
 
         diablo_windows = self._get_diablo_windows()
-        target_title = values[0]
         self.main_diablo_window = next(
             (win.window_obj for win in diablo_windows if win.title == target_title),
             None,
@@ -464,13 +455,13 @@ class DiabloWindowMonitor:
                 self.main_diablo_window.height,
             )
             self.main_window_label.config(text=f"当前主程序：{self.main_window_title}")
-            self.script_main_window_label.config(
+            self.script_frame.script_main_window_label.config(
                 text=f"主程序：{self.main_window_title}"
             )
 
             for row in self.window_tree_frame.tree.get_children():
-                self.window_tree_frame.tree.item(row, tags=("normal",))
-            self.window_tree_frame.tree.item(item, tags=("main",))
+                self.window_tree_frame.window_tree_frame.item(row, tags=("normal",))
+            self.window_tree_frame.window_tree_frame.item(item, tags=("main",))
             self._create_bubbles_by_script_status()
 
     def _toggle_bubbles_visibility(self, event=None):

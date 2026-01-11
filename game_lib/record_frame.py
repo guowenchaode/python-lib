@@ -11,7 +11,7 @@ class RecordFrame:
             text="按键-千分比坐标记录",
             padding=10,
         )
-        self.record_frame.pack(fill=tk.X, padx=20, pady=5)
+        self.record_frame.pack(fill=tk.X, padx=20, pady=5, ipadx=80)
 
         record_tree_style = ttk.Style()
         record_tree_style.configure("Record.Treeview", font=CONFIG["normal_font"])
@@ -30,7 +30,7 @@ class RecordFrame:
         self.record_tree.heading("千分比坐标", text="主程序千分比坐标(X‰, Y‰)")
         self.record_tree.column("按键", width=100)
         self.record_tree.column("千分比坐标", width=200)
-        self.record_tree.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.record_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         record_btn_frame = ttk.Frame(self.record_frame)
         record_btn_frame.pack(side=tk.RIGHT, padx=10)

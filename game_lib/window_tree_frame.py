@@ -30,7 +30,7 @@ class WindowTreeFrame:
             self.window_tree.heading(col, text=col)
             self.window_tree.column(col, width=width)
 
-        self.window_tree.pack(fill=tk.X)
+        self.window_tree.pack(fill=tk.BOTH, expand=True)
         self.window_tree.bind("<Double-1>", self._on_window_double_click)
 
         self.update_window_tree_callback = update_window_tree_callback
