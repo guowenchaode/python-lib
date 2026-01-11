@@ -47,8 +47,11 @@ class ScriptExecutor:
                 )
                 return
             elif action == "click":
+                last_x, last_y = pyautogui.position()
+                print(f"当前鼠标位置: ({last_x}, {last_y})")
                 pyautogui.click(cmd.abs_x, cmd.abs_y)
                 cmd.status = "已执行"
+                pyautogui.moveTo(last_x, last_y)
             else:
                 cmd.status = "已执行"
         except Exception as e:
@@ -58,6 +61,7 @@ class ScriptExecutor:
             time.sleep(1)
 
     def wait_next_loop(self):
+        
         print(f"[{self.current_loop_count}] 脚本循环结束，等待下一轮开始...")
         # self.ui_callbacks["on_loop_end"]()
 

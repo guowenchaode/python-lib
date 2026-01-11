@@ -38,6 +38,7 @@ class ScriptFrame:
             text="脚本执行模块（千分比坐标）",
             padding=10,
         )
+        self.script_executor = None
         self.script_frame.pack(fill=tk.BOTH, padx=20, pady=5, expand=True)
         self.script_current_index = 0
         script_ctrl_frame = ttk.Frame(self.script_frame)
@@ -262,6 +263,8 @@ class ScriptFrame:
             messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
         finally:
             self._update_script_tree()
+            if self.script_executor:
+                self.script_executor.commands = self.script_commands
 
     def _initialize_script_executor(self):
         """Initialize the ScriptExecutor with the current script commands and configuration."""
