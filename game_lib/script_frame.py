@@ -19,15 +19,12 @@ class ScriptCommand:
 
 
 class ScriptFrame:
-    def __init__(
-        self,
-        parent,
-        root
-    ):
+    def __init__(self, parent, root):
         self.parent = parent
         self.root = root
         self.script_running = False
         self.stop_on_background = False
+        self.script_loop = True
         self.loop_interval = CONFIG["default_loop_interval"]
         self.script_frame = ttk.LabelFrame(
             parent,  # 修改parent为content_frame
@@ -35,7 +32,7 @@ class ScriptFrame:
             padding=10,
         )
         self.script_frame.pack(fill=tk.BOTH, padx=20, pady=5, expand=True)
-
+        self.script_current_index = 0
         script_ctrl_frame = ttk.Frame(self.script_frame)
         script_ctrl_frame.pack(fill=tk.X, pady=5)
 
