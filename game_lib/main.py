@@ -385,7 +385,7 @@ class DiabloWindowMonitor:
             for row in self.window_tree_frame.window_tree.get_children():
                 self.window_tree_frame.window_tree.item(row, tags=("normal",))
 
-            self.script_frame._update_script_tree()
+            # self.script_frame.reload()
 
     def _on_key_press(self, event):
         if not self.main_diablo_window or not self.current_diablo_window:
@@ -533,6 +533,7 @@ class DiabloWindowMonitor:
     def _get_diablo_windows(self):
         """Retrieve a list of Diablo windows."""
         try:
+            main_diablo_window = CONFIG["main_diablo_window"]
             windows = gw.getWindowsWithTitle("")
             diablo_windows = [
                 DiabloWindowInfo(
@@ -544,7 +545,7 @@ class DiabloWindowMonitor:
                     is_active=(win == gw.getActiveWindow()),
                 )
                 for win in windows
-                if "暗黑破坏神" in win.title
+                if main_diablo_window == win.title
             ]
             return diablo_windows
         except Exception as e:

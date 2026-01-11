@@ -10,10 +10,12 @@ from ui_components import BubbleWindow
 
 
 class ScriptCommand:
-    def __init__(self, key, x, y, status, source, action="click"):
+    def __init__(self, key, x, y, abs_x, abs_y, status, source, action="click"):
         self.key = key
         self.x = x
         self.y = y
+        self.abs_x = abs_x
+        self.abs_y = abs_y
         self.status = status
         self.source = source
         self.action = action
@@ -188,11 +190,10 @@ class ScriptFrame:
             while next_idx < len(self.script_commands):
                 cmd = self.script_commands[next_idx]
                 if cmd.source != "系统倒计时":
-                    abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
                     self.highlighted_bubble = BubbleWindow(
                         self.root.root,
-                        abs_x,
-                        abs_y,
+                        cmd.abs_x,
+                        cmd.abs_y,
                         next_idx + 1,
                         cmd.key,
                         is_highlight=True,
@@ -229,16 +230,21 @@ class ScriptFrame:
         try:
             df = pd.read_csv(file_path, encoding="utf-8")
             records = df.to_dict(orient="records")
-            self.script_commands = [
-                ScriptCommand(
+            self.script_commands = []
+            for row in records:
+                x = float(row.get("x", 0))
+                y = float(row.get("y", 0))
+                abs_x, abs_y = self._permil_to_absolute(x, y)
+                cmd = ScriptCommand(
                     key=row.get("key", ""),
-                    x=float(row.get("x", 0)),
-                    y=float(row.get("y", 0)),
+                    x=float(x),
+                    y=float(y),
+                    abs_x=abs_x,
+                    abs_y=abs_y,
                     status="未执行",
                     source="用户脚本",
                 )
-                for row in records
-            ]
+                self.script_commands.append(cmd)
 
             self.script_file_path = file_path
             self.script_status_label.config(
@@ -256,19 +262,6 @@ class ScriptFrame:
         """Initialize the ScriptExecutor with the current script commands and configuration."""
         self.script_executor = ScriptExecutor(
             commands=self.script_commands,
-            config=CONFIG,
-            ui_callbacks={
-                "on_start": self._on_script_start,
-                "on_pause": self._on_script_pause,
-                "on_stop": self._on_script_stop,
-                "on_loop_end": self._on_loop_end,
-                "update_tree": self._update_script_tree,
-                "update_status": self._update_status_label,
-                "permil_to_absolute": self._permil_to_absolute,
-                "check_foreground": self._check_main_window_foreground,
-                "bubbles_visible": lambda: self.bubbles_visible,
-                "update_bubbles": self._create_bubbles_by_script_status,
-            },
         )
 
     def _start_script(self):
@@ -290,6 +283,10 @@ class ScriptFrame:
             self.script_executor.stop()
             self.script_running = False
 
+    def reload(self):
+        self._load_script()
+        self._update_script_tree()
+
     def _update_script_tree(self):
         # Clear existing items
         for item in self.script_tree.get_children():
@@ -297,14 +294,13 @@ class ScriptFrame:
 
         # Add updated script commands
         for idx, command in enumerate(self.script_commands):
-            abs_x, abs_y = self._permil_to_absolute(command.x, command.y)
             self.script_tree.insert(
                 "",
                 "end",
                 values=(
                     idx + 1,
                     command.key,
-                    f"{command.x * 1000:.0f}‰, {command.y * 1000:.0f}‰  ({abs_x}, {abs_y})",
+                    f"{command.x * 1000:.0f}‰, {command.y * 1000:.0f}‰  ({command.abs_x}, {command.abs_y})",
                     command.status,
                     command.source,
                 ),
