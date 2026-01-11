@@ -438,6 +438,10 @@ class DiabloWindowMonitor:
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
     def _on_window_double_click(self, event):
+        """Handle double-click events on the window tree."""
+        if not hasattr(self.window_tree_frame, 'tree'):
+            return
+
         item = self.window_tree_frame.tree.identify_row(event.y)
         if not item:
             return
