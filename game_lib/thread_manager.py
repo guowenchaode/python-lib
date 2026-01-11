@@ -58,7 +58,7 @@ class ThreadManager:
         while self.monitor_event.is_set():
             try:
                 mouse_x, mouse_y = pyautogui.position()
-                print(f"鼠标位置：{mouse_x}, {mouse_y}")
+                # print(f"鼠标位置：{mouse_x}, {mouse_y}")
                 if (mouse_x, mouse_y) == last_mouse_pos:
                     time.sleep(self.config["monitor_mouse_interval"])
                     continue

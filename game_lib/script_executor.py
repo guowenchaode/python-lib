@@ -4,6 +4,7 @@ import traceback
 from tkinter import messagebox
 from typing import List
 from data_models import ScriptCommand
+from config_manager import CONFIG
 
 
 class ScriptExecutor:
@@ -32,6 +33,13 @@ class ScriptExecutor:
 
                 if self.current_index >= len(self.commands):
                     self.ui_callbacks["on_loop_end"]()
+
+                    left = int(CONFIG["default_loop_interval"])
+
+                    while left > 0 and self.running:
+                        time.sleep(1)
+                        left -= 1
+
                     if self.loop:
                         self.current_index = 0
                         self._add_countdown_commands()
@@ -39,9 +47,9 @@ class ScriptExecutor:
                         break
 
                 cmd = self.commands[self.current_index]
-
+                action = cmd.action if hasattr(cmd, "action") else ""
                 try:
-                    if cmd.source != "系统倒计时":
+                    if action == "click":
                         abs_x, abs_y = self.ui_callbacks["permil_to_absolute"](
                             cmd.x, cmd.y
                         )
