@@ -967,18 +967,20 @@ class DiabloWindowMonitor:
     def _get_diablo_windows(self):
         """Retrieve a list of Diablo windows."""
         try:
-            windows = gw.getWindowsWithTitle("Diablo")
-            return [
-                {
-                    "title": win.title.strip(),
-                    "left": win.left,
-                    "top": win.top,
-                    "width": win.width,
-                    "height": win.height,
-                }
+            windows = gw.getWindowsWithTitle("")
+            diablo_windows = [
+                DiabloWindowInfo(
+                    window_obj=win,
+                    title=win.title.strip(),
+                    pos=f"({win.left}, {win.top})",
+                    size=f"{win.width}x{win.height}",
+                    status="前台" if win == gw.getActiveWindow() else "后台",
+                    is_active=(win == gw.getActiveWindow()),
+                )
                 for win in windows
-                if win.title.strip()
+                if "暗黑破坏神" in win.title
             ]
+            return diablo_windows
         except Exception as e:
             messagebox.showerror("错误", f"获取暗黑窗口失败：{str(e)}")
             return []
