@@ -13,7 +13,7 @@ class ScriptExecutor:
         self.running = False
         self.paused = False
         self.current_index = 0
-        self.current_loop_count = 0
+        self.current_loop_count = 1
         self.loop = True
         self.loop_interval = CONFIG["default_loop_interval"]
 
@@ -35,16 +35,22 @@ class ScriptExecutor:
             )
             action = cmd.action
 
-            if action == "click":
-                # if self.ui_callbacks["check_foreground"]():
+            is_ignored = (
+                cmd.loop_count > 0
+                and self.current_loop_count > 0
+                and self.current_loop_count % cmd.loop_count != 0
+            )
+
+            if is_ignored:
+                print(
+                    f"命令 {cmd.key} 被忽略，循环计数：{cmd.loop_count} / {self.current_loop_count}"
+                )
+                return
+            elif action == "click":
                 pyautogui.click(cmd.abs_x, cmd.abs_y)
-                # pyautogui.press(cmd.key)
                 cmd.status = "已执行"
-            # else:
-            #     cmd.status = "主程序后台，跳过"
             else:
                 cmd.status = "已执行"
-                # self.ui_callbacks["update_status"](f"脚本状态：{cmd.key}")
         except Exception as e:
             traceback.print_exc()
         finally:

@@ -11,7 +11,9 @@ import threading
 
 
 class ScriptCommand:
-    def __init__(self, key, x, y, abs_x, abs_y, status, source, action="click"):
+    def __init__(
+        self, key, x, y, abs_x, abs_y, status, loop_count, source, action="click"
+    ):
         self.key = key
         self.x = x
         self.y = y
@@ -20,6 +22,7 @@ class ScriptCommand:
         self.status = status
         self.source = source
         self.action = action
+        self.loop_count = loop_count
 
 
 class ScriptFrame:
@@ -242,6 +245,7 @@ class ScriptFrame:
                     y=float(y),
                     abs_x=abs_x,
                     abs_y=abs_y,
+                    loop_count=row.get("loop_count", 0),
                     status="未执行",
                     source="用户脚本",
                 )
@@ -266,6 +270,7 @@ class ScriptFrame:
         )
 
     def _start_script(self):
+        self._load_script()
         if self.script_running or not self.script_commands:
             return
 
