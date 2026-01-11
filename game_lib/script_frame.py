@@ -3,27 +3,32 @@ from tkinter import messagebox
 import tkinter as tk
 from config_manager import CONFIG
 from script_executor import ScriptExecutor
+from tkinter import filedialog
+import pandas as pd
+import traceback
+from ui_components import BubbleWindow
+
+
+class ScriptCommand:
+    def __init__(self, key, x, y, status, source):
+        self.key = key
+        self.x = x
+        self.y = y
+        self.status = status
+        self.source = source
+
 
 class ScriptFrame:
     def __init__(
         self,
         parent,
-        load_script,
-        start_script,
-        pause_script,
-        stop_script,
-        toggle_bubbles_visibility,
-        set_loop_interval,
-        permil_to_absolute,
-        check_main_window_foreground,
-        create_bubbles_by_script_status,
-        update_script_tree,
-        update_status_label,
-        script_commands,
-        script_running,
-        stop_on_background,
-        loop_interval,
+        root
     ):
+        self.parent = parent
+        self.root = root
+        self.script_running = False
+        self.stop_on_background = False
+        self.loop_interval = CONFIG["default_loop_interval"]
         self.script_frame = ttk.LabelFrame(
             parent,  # 修改parent为content_frame
             text="脚本执行模块（千分比坐标）",
@@ -43,28 +48,28 @@ class ScriptFrame:
         self.script_main_window_label.pack(side=tk.LEFT, padx=5)
 
         self.load_script_btn = ttk.Button(
-            script_ctrl_frame, text="加载CSV脚本", command=load_script
+            script_ctrl_frame, text="加载CSV脚本", command=self._load_script
         )
         self.start_script_btn = ttk.Button(
             script_ctrl_frame,
             text="启动脚本",
-            command=start_script,
+            command=self._start_script,
             state=tk.DISABLED,
         )
         self.pause_script_btn = ttk.Button(
             script_ctrl_frame,
             text="暂停脚本",
-            command=pause_script,
+            command=self._pause_script,
             state=tk.DISABLED,
         )
         self.stop_script_btn = ttk.Button(
             script_ctrl_frame,
             text="停止脚本",
-            command=stop_script,
+            command=self._stop_script,
             state=tk.DISABLED,
         )
         self.toggle_bubble_btn = ttk.Button(
-            script_ctrl_frame, text="隐藏气泡", command=toggle_bubbles_visibility
+            script_ctrl_frame, text="隐藏气泡", command=self._toggle_bubbles_visibility
         )
 
         for btn in [
@@ -76,13 +81,13 @@ class ScriptFrame:
         ]:
             btn.pack(side=tk.LEFT, padx=5)
 
-        self.stop_on_background_var = tk.BooleanVar(value=stop_on_background)
+        self.stop_on_background_var = tk.BooleanVar(value=self.stop_on_background)
         self.stop_on_background_check = ttk.Checkbutton(
             script_ctrl_frame,
             text="主程序后台时自动停止脚本",
             variable=self.stop_on_background_var,
             command=lambda: setattr(
-                stop_on_background, self.stop_on_background_var.get()
+                self.stop_on_background, self.stop_on_background_var.get()
             ),
         )
         self.stop_on_background_check.pack(side=tk.LEFT, padx=10)
@@ -92,7 +97,7 @@ class ScriptFrame:
             script_ctrl_frame,
             text="循环执行",
             variable=self.loop_var,
-            command=lambda: setattr(script_running, self.loop_var.get()),
+            command=lambda: setattr(self.script_running, self.loop_var.get()),
         )
         self.loop_check.pack(side=tk.LEFT, padx=10)
 
@@ -102,11 +107,11 @@ class ScriptFrame:
         self.interval_entry = ttk.Entry(
             script_ctrl_frame, width=8, font=CONFIG["normal_font"]
         )
-        self.interval_entry.insert(0, str(loop_interval))
+        self.interval_entry.insert(0, str(self.loop_interval))
         self.interval_entry.pack(side=tk.LEFT, padx=5)
 
         self.set_interval_btn = ttk.Button(
-            script_ctrl_frame, text="确认", command=set_loop_interval
+            script_ctrl_frame, text="确认", command=self._set_loop_interval
         )
         self.set_interval_btn.pack(side=tk.LEFT, padx=5)
 
@@ -138,3 +143,242 @@ class ScriptFrame:
         self.script_tree.configure(yscrollcommand=script_scroll.set)
         self.script_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         script_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.script_commands = []
+        self.script_file_path = ""
+
+        # 气泡相关属性
+        self.bubbles_visible = True
+        self.bubble_windows = []
+        self.highlighted_bubble = None
+        self.main_diablo_window = None
+        self.main_window_size = (0, 0)
+
+    def _set_loop_interval(self):
+        try:
+            interval = float(self.interval_entry.get())
+            if interval < 0:
+                raise ValueError("间隔时间不能为负数")
+            if interval > 3600:
+                raise ValueError("间隔时间不能超过3600秒")
+
+            self.loop_interval = interval
+            messagebox.showinfo("提示", f"循环间隔已设置为：{interval}秒")
+        except ValueError as e:
+            self.interval_entry.delete(0, tk.END)
+            self.interval_entry.insert(0, str(self.loop_interval))
+            messagebox.showwarning("提示", f"输入错误：{str(e)}")
+
+    def _toggle_bubbles_visibility(self, event=None):
+        self.bubbles_visible = not self.bubbles_visible
+        self.toggle_bubble_btn.config(
+            text="隐藏气泡" if self.bubbles_visible else "显示气泡"
+        )
+
+        if self.bubbles_visible:
+            self._create_bubbles_by_script_status()
+        else:
+            self._destroy_all_bubbles()
+
+    def _create_bubbles_by_script_status(self):
+        self._destroy_all_bubbles()
+
+        if self.script_running:
+            next_idx = self.script_current_index
+            while next_idx < len(self.script_commands):
+                cmd = self.script_commands[next_idx]
+                if cmd.source != "系统倒计时":
+                    abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
+                    self.highlighted_bubble = BubbleWindow(
+                        self.root,
+                        abs_x,
+                        abs_y,
+                        next_idx + 1,
+                        cmd.key,
+                        is_highlight=True,
+                    )
+                    break
+                next_idx += 1
+        else:
+            bubbles = []
+            for idx, cmd in enumerate(self.script_commands):
+                if cmd.source == "系统倒计时":
+                    continue
+                abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
+                bubble = BubbleWindow(self.root, abs_x, abs_y, idx + 1, cmd.key)
+                bubbles.append(bubble)
+            self.bubble_windows = bubbles
+
+    def _load_script(self):
+        """Load a script file (CSV) and populate the script commands using pandas."""
+        file_path = filedialog.askopenfilename(
+            title="选择脚本文件", filetypes=[("CSV Files", "*.csv"), ("All Files", "*")]
+        )
+
+        if not file_path:
+            return
+
+        try:
+            df = pd.read_csv(file_path, encoding="utf-8")
+            records = df.to_dict(orient="records")
+            self.script_commands = [
+                ScriptCommand(
+                    key=row.get("key", ""),
+                    x=float(row.get("x", 0)),
+                    y=float(row.get("y", 0)),
+                    status="未执行",
+                    source="用户脚本",
+                )
+                for row in records
+            ]
+
+            self.script_file_path = file_path
+            self.script_status_label.config(
+                text=f"脚本状态：已加载 ({len(self.script_commands)} 条命令)"
+            )
+            self.start_script_btn.config(state=tk.NORMAL)
+            messagebox.showinfo("成功", "脚本加载成功！")
+        except Exception as e:
+            traceback.print_exc()
+            messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
+        finally:
+            self._update_script_tree()
+
+    def _initialize_script_executor(self):
+        """Initialize the ScriptExecutor with the current script commands and configuration."""
+        self.script_executor = ScriptExecutor(
+            commands=self.script_commands,
+            config=CONFIG,
+            ui_callbacks={
+                "on_start": self._on_script_start,
+                "on_pause": self._on_script_pause,
+                "on_stop": self._on_script_stop,
+                "on_loop_end": self._on_loop_end,
+                "update_tree": self._update_script_tree,
+                "update_status": self._update_status_label,
+                "permil_to_absolute": self._permil_to_absolute,
+                "check_foreground": self._check_main_window_foreground,
+                "bubbles_visible": lambda: self.bubbles_visible,
+                "update_bubbles": self._create_bubbles_by_script_status,
+            },
+        )
+
+    def _start_script(self):
+        if self.script_running or not self.script_commands:
+            return
+
+        self._initialize_script_executor()
+        self.script_running = True
+        self.script_executor.start()
+
+    def _pause_script(self):
+        if self.script_executor:
+            self.script_executor.pause()
+
+    def _stop_script(self):
+        if self.script_executor:
+            self.script_executor.stop()
+            self.script_running = False
+
+    def _update_script_tree(self):
+        if not hasattr(self, "script_tree"):
+            return
+
+        # Clear existing items
+        for item in self.script_tree.get_children():
+            self.script_tree.delete(item)
+
+        # Add updated script commands
+        for idx, command in enumerate(self.script_commands):
+            self.script_tree.insert(
+                "",
+                "end",
+                values=(
+                    idx + 1,
+                    command.key,
+                    f"{command.x * 1000:.0f}‰, {command.y * 1000:.0f}‰",
+                    command.status,
+                    command.source,
+                ),
+            )
+
+    def _on_script_start(self):
+        self.start_script_btn.config(state=tk.DISABLED)
+        self.pause_script_btn.config(state=tk.NORMAL)
+        self.stop_script_btn.config(state=tk.NORMAL)
+
+    def _on_script_pause(self):
+        self.start_script_btn.config(state=tk.NORMAL)
+        self.pause_script_btn.config(state=tk.DISABLED)
+        self.stop_script_btn.config(state=tk.NORMAL)
+
+    def _on_script_stop(self):
+        self.start_script_btn.config(state=tk.NORMAL)
+        self.pause_script_btn.config(state=tk.DISABLED)
+        self.stop_script_btn.config(state=tk.DISABLED)
+
+    def _on_loop_end(self):
+        self.start_script_btn.config(state=tk.NORMAL)
+        self.pause_script_btn.config(state=tk.DISABLED)
+        self.stop_script_btn.config(state=tk.DISABLED)
+
+    def _update_status_label(self, status_text):
+        self.script_status_label.config(text=status_text)
+
+    def _permil_to_absolute(self, x_permil, y_permil):
+        if not self.script_commands or not self.script_commands[0]:
+            return 0, 0
+
+        abs_x = int(x_permil * 1000)
+        abs_y = int(y_permil * 1000)
+        return abs_x, abs_y
+
+    def _check_main_window_foreground(self):
+        return True  # Placeholder for actual foreground check logic
+
+    def _destroy_all_bubbles(self):
+        for bubble in self.bubble_windows:
+            bubble.destroy()
+        self.bubble_windows.clear()
+
+        if self.highlighted_bubble:
+            self.highlighted_bubble.destroy()
+            self.highlighted_bubble = None
+
+    def _add_countdown_commands(self):
+        if not self.script_loop or self.loop_interval <= 0:
+            return
+
+        self.script_commands = [
+            cmd for cmd in self.script_commands if cmd.source != "系统倒计时"
+        ]
+
+        for i in range(int(self.loop_interval), 0, -1):
+            self.script_commands.append(
+                ScriptCommand(
+                    key=f"倒计时{i}秒",
+                    x=0.0,
+                    y=0.0,
+                    status="未执行",
+                    source="系统倒计时",
+                )
+            )
+        self.script_commands.append(
+            ScriptCommand(
+                key="倒计时结束", x=0.0, y=0.0, status="未执行", source="系统倒计时"
+            )
+        )
+
+    def _scroll_to_current_command(self):
+        if self.script_current_index > 0 and self.script_tree.get_children():
+            try:
+                current_item = self.script_tree.get_children()[
+                    self.script_current_index - 1
+                ]
+                self.script_tree.see(current_item)
+                for item in self.script_tree.get_children():
+                    self.script_tree.item(item, tags=())
+                self.script_tree.item(current_item, tags=("current",))
+                self.script_tree.tag_configure("current", background="#ffffcc")
+            except Exception:
+                pass

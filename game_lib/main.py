@@ -19,14 +19,13 @@ import threading
 from config_frame import load_settings, export_settings
 from data_models import ScriptCommand, DiabloWindowInfo
 from ui_components import BubbleWindow
-from script_executor import ScriptExecutor
 from window_tree_frame import WindowTreeFrame
 from record_frame import RecordFrame
 from script_frame import ScriptFrame
 from config_frame import ConfigFrame
 
 
-# ===================== 配置文件管理 =====================
+# ===================== 配置文件管理 ================h=====
 def load_settings(config_path: str = "settings.properties") -> Dict[str, Any]:
     """加载配置文件，不存在则创建默认配置"""
     config = configparser.ConfigParser()
@@ -270,10 +269,10 @@ class DiabloWindowMonitor:
                 "script_running": lambda: self.script_running,
                 "stop_on_background": lambda: self.stop_on_background,
                 "check_main_window_foreground": self._check_main_window_foreground,
-                "stop_script": self._stop_script,
+                "stop_script": self.script_frame._stop_script,
                 "bubbles_visible": lambda: self.bubbles_visible,
                 "script_commands": lambda: self.script_commands,
-                "create_bubbles": self._create_bubbles_by_script_status,
+                "create_bubbles": self.script_frame._create_bubbles_by_script_status,
                 "main_window": lambda: self.main_diablo_window,
                 "main_window_geometry": lambda: (
                     self.main_diablo_window.left,
@@ -374,22 +373,12 @@ class DiabloWindowMonitor:
     def _init_script_frame(self):
         self.script_frame = ScriptFrame(
             self.content_frame,
-            self._load_script,
-            self._start_script,
-            self._pause_script,
-            self._stop_script,
-            self._toggle_bubbles_visibility,
-            self._set_loop_interval,
-            self._permil_to_absolute,
-            self._check_main_window_foreground,
-            self._create_bubbles_by_script_status,
-            self._update_script_tree,
-            self._update_status_label,
-            self.script_commands,
-            self.script_running,
-            self.stop_on_background,
-            self.loop_interval,
+            self.root
         )
+
+        # Delegate ScriptFrame methods
+        self._start_script = self.script_frame._start_script
+        self._update_script_tree = self.script_frame._update_script_tree
 
     def _init_config_frame(self):
         self.config_frame = ConfigFrame(
@@ -434,7 +423,7 @@ class DiabloWindowMonitor:
         self.root.bind(
             "<FocusOut>", lambda e: setattr(self, "is_tool_foreground", False)
         )
-        self.root.bind("<F12>", self._toggle_bubbles_visibility)
+        self.root.bind("<F12>", self.script_frame._toggle_bubbles_visibility)
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
     def _on_window_double_click(self, target_title):
@@ -462,151 +451,6 @@ class DiabloWindowMonitor:
             for row in self.window_tree_frame.window_tree.get_children():
                 self.window_tree_frame.window_tree.item(row, tags=("normal",))
             # self.window_tree_frame.window_tree_frame.item(item, tags=("main",))
-            self._create_bubbles_by_script_status()
-
-    def _toggle_bubbles_visibility(self, event=None):
-        self.bubbles_visible = not self.bubbles_visible
-        self.toggle_bubble_btn.config(
-            text="隐藏气泡" if self.bubbles_visible else "显示气泡"
-        )
-
-        if self.bubbles_visible:
-            self._create_bubbles_by_script_status()
-        else:
-            self._destroy_all_bubbles()
-
-    def _destroy_all_bubbles(self):
-        for bubble in self.bubble_windows:
-            bubble.destroy()
-        self.bubble_windows.clear()
-
-        if self.highlighted_bubble:
-            self.highlighted_bubble.destroy()
-            self.highlighted_bubble = None
-
-    def _create_bubbles_by_script_status(self):
-        if (
-            not self.bubbles_visible
-            or not self.script_commands
-            or not self.main_diablo_window
-            or self.main_window_size == (0, 0)
-        ):
-            return
-
-        self._destroy_all_bubbles()
-
-        if self.script_running:
-            next_idx = self.script_current_index
-            while next_idx < len(self.script_commands):
-                cmd = self.script_commands[next_idx]
-                if cmd.source != "系统倒计时":
-                    abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
-                    self.highlighted_bubble = BubbleWindow(
-                        self.root,
-                        abs_x,
-                        abs_y,
-                        next_idx + 1,
-                        cmd.key,
-                        is_highlight=True,
-                    )
-                    break
-                next_idx += 1
-        else:
-            bubbles = []
-            for idx, cmd in enumerate(self.script_commands):
-                if cmd.source == "系统倒计时":
-                    continue
-                abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
-                bubble = BubbleWindow(self.root, abs_x, abs_y, idx + 1, cmd.key)
-                bubbles.append(bubble)
-            self.bubble_windows = bubbles
-
-    def _set_loop_interval(self):
-        try:
-            interval = float(self.interval_entry.get())
-            if interval < 0:
-                raise ValueError("间隔时间不能为负数")
-            if interval > 3600:
-                raise ValueError("间隔时间不能超过3600秒")
-
-            self.loop_interval = interval
-            messagebox.showinfo("提示", f"循环间隔已设置为：{interval}秒")
-        except ValueError as e:
-            self.interval_entry.delete(0, tk.END)
-            self.interval_entry.insert(0, str(self.loop_interval))
-            messagebox.showwarning("提示", f"输入错误：{str(e)}")
-
-    def _add_countdown_commands(self):
-        if not self.script_loop or self.loop_interval <= 0:
-            return
-
-        self.script_commands = [
-            cmd for cmd in self.script_commands if cmd.source != "系统倒计时"
-        ]
-
-        for i in range(int(self.loop_interval), 0, -1):
-            self.script_commands.append(
-                ScriptCommand(
-                    key=f"倒计时{i}秒",
-                    x=0.0,
-                    y=0.0,
-                    status="未执行",
-                    source="系统倒计时",
-                )
-            )
-        self.script_commands.append(
-            ScriptCommand(
-                key="倒计时结束", x=0.0, y=0.0, status="未执行", source="系统倒计时"
-            )
-        )
-
-    def _start_script(self):
-        if self.script_running or not self.script_commands:
-            return
-
-        # Initialize ScriptExecutor
-        self.script_executor = ScriptExecutor(
-            commands=self.script_commands,
-            config=CONFIG,
-            ui_callbacks={
-                "on_start": self._on_script_start,
-                "on_pause": self._on_script_pause,
-                "on_stop": self._on_script_stop,
-                "on_loop_end": self._on_loop_end,
-                "update_tree": self._update_script_tree,
-                "update_status": self._update_status_label,
-                "permil_to_absolute": self._permil_to_absolute,
-                "check_foreground": self._check_main_window_foreground,
-                "bubbles_visible": lambda: self.bubbles_visible,
-                "update_bubbles": self._create_bubbles_by_script_status,
-            },
-        )
-
-        self.script_running = True
-        self.script_executor.start()
-
-    def _pause_script(self):
-        if self.script_executor:
-            self.script_executor.pause()
-
-    def _stop_script(self):
-        if self.script_executor:
-            self.script_executor.stop()
-            self.script_running = False
-
-    def _scroll_to_current_command(self):
-        if self.script_current_index > 0 and self.script_tree.get_children():
-            try:
-                current_item = self.script_tree.get_children()[
-                    self.script_current_index - 1
-                ]
-                self.script_tree.see(current_item)
-                for item in self.script_tree.get_children():
-                    self.script_tree.item(item, tags=())
-                self.script_tree.item(current_item, tags=("current",))
-                self.script_tree.tag_configure("current", background="#ffffcc")
-            except Exception:
-                pass
 
     def _on_key_press(self, event):
         if not self.main_diablo_window or not self.current_diablo_window:
@@ -733,7 +577,7 @@ class DiabloWindowMonitor:
             return False
 
     def _stop_monitor(self):
-        if messagebox.askyesno("确认", "是否确定停止监控并退出？"):
+        if messagebox.askyesno("确认", "是否确定停止监控并退出？"):  
             self._stop_monitor_threads()
             self.root.quit()
             self.root.destroy()
@@ -748,38 +592,6 @@ class DiabloWindowMonitor:
     def _on_window_close(self):
         self._stop_monitor_threads()
         self.root.quit()
-
-    def _load_script(self):
-        """Load a script file (CSV) and populate the script commands using pandas."""
-        file_path = filedialog.askopenfilename(
-            title="选择脚本文件",
-            filetypes=[("CSV Files", "*.csv"), ("All Files", "*")]
-        )
-
-        if not file_path:
-            return
-
-        try:
-            df = pd.read_csv(file_path, encoding="utf-8")
-            records = df.to_dict(orient="records")
-            self.script_commands = [
-                ScriptCommand(
-                    key=row.get("key", ""),
-                    x=float(row.get("x", 0)),
-                    y=float(row.get("y", 0)),
-                    status="未执行",
-                    source="用户脚本",
-                )
-                for row in records
-            ]
-
-            self.script_file_path = file_path
-            self.script_frame.script_status_label.config(text=f"脚本状态：已加载 ({len(self.script_commands)} 条命令)")
-            self.script_frame.start_script_btn.config(state=tk.NORMAL)
-            messagebox.showinfo("成功", "脚本加载成功！")
-        except Exception as e:
-            traceback.print_exc()
-            messagebox.showerror("错误", f"加载脚本失败：{str(e)}")
 
     def _get_diablo_windows(self):
         """Retrieve a list of Diablo windows."""
@@ -801,39 +613,6 @@ class DiabloWindowMonitor:
         except Exception as e:
             messagebox.showerror("错误", f"获取暗黑窗口失败：{str(e)}")
             return []
-
-    def _permil_to_absolute(self, x_permil, y_permil):
-        """Convert permil (‰) coordinates to absolute screen coordinates."""
-        if not self.main_diablo_window or self.main_window_size == (0, 0):
-            return 0, 0
-
-        abs_x = self.main_diablo_window.left + int(x_permil * self.main_window_size[0])
-        abs_y = self.main_diablo_window.top + int(y_permil * self.main_window_size[1])
-        return abs_x, abs_y
-
-    def _update_script_tree(self):
-        """Update the script tree view with the current script commands."""
-        if not hasattr(self, 'script_tree'):
-            return
-
-        # Clear existing items
-        for item in self.script_tree.get_children():
-            self.script_tree.delete(item)
-
-        # Add updated script commands
-        for idx, command in enumerate(self.script_commands):
-            self.script_tree.insert(
-                "",
-                "end",
-                values=(
-                    idx + 1,
-                    command.key,
-                    f"{command.x * 1000:.0f}‰, {command.y * 1000:.0f}‰",
-                    command.status,
-                    command.source,
-                ),
-            )
-
 
 # ===================== 程序入口 =====================
 if __name__ == "__main__":
