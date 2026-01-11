@@ -26,12 +26,17 @@ class ScriptExecutor:
         self.paused = False
         self.ui_callbacks["on_start"]()
 
+        command_count = len(self.commands)
+        print(f"脚本开始执行，共有 {command_count} 条命令。")
         try:
             while self.running:
                 while self.paused and self.running:
-                    time.sleep(0.5)
+                    print("脚本暂停中...")
+                    time.sleep(1)
 
                 if self.current_index >= len(self.commands):
+                    print("脚本循环结束，等待下一轮开始...")
+                    self.current_index = 0
                     self.ui_callbacks["on_loop_end"]()
 
                     left = int(CONFIG["default_loop_interval"])
@@ -47,7 +52,11 @@ class ScriptExecutor:
                         break
 
                 cmd = self.commands[self.current_index]
-                action = cmd.action if hasattr(cmd, "action") else ""
+                print(
+                    f"脚本执行循环中... 当前索引：{self.current_index} / {command_count}, 命令：{cmd}"
+                )
+                action = cmd.action
+
                 try:
                     if action == "click":
                         abs_x, abs_y = self.ui_callbacks["permil_to_absolute"](
@@ -62,13 +71,11 @@ class ScriptExecutor:
                     else:
                         cmd.status = "已执行"
                         self.ui_callbacks["update_status"](f"脚本状态：{cmd.key}")
-                        time.sleep(1)
                 except Exception as e:
                     traceback.print_exc()
                 finally:
                     if not self.running:
                         break
-
                     self.ui_callbacks["update_tree"]()
                     self.current_index += 1
 

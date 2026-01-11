@@ -10,12 +10,13 @@ from ui_components import BubbleWindow
 
 
 class ScriptCommand:
-    def __init__(self, key, x, y, status, source):
+    def __init__(self, key, x, y, status, source, action="click"):
         self.key = key
         self.x = x
         self.y = y
         self.status = status
         self.source = source
+        self.action = action
 
 
 class ScriptFrame:
@@ -271,6 +272,8 @@ class ScriptFrame:
         )
 
     def _start_script(self):
+        print("启动脚本")
+
         if self.script_running or not self.script_commands:
             return
 
@@ -334,8 +337,12 @@ class ScriptFrame:
         if not self.root.main_window_location or not x_permil or not y_permil:
             return 0, 0
 
-        abs_x = self.root.main_window_location[0] + int(x_permil * self.root.main_window_size[0])
-        abs_y = self.root.main_window_location[1] + int(y_permil * self.root.main_window_size[1])
+        abs_x = self.root.main_window_location[0] + int(
+            x_permil * self.root.main_window_size[0]
+        )
+        abs_y = self.root.main_window_location[1] + int(
+            y_permil * self.root.main_window_size[1]
+        )
         return abs_x, abs_y
 
     def _check_main_window_foreground(self):
