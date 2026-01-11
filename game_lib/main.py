@@ -146,6 +146,7 @@ class DiabloWindowMonitor:
         self.main_diablo_window: Optional[gw.Window] = None
         self.main_window_title: str = ""
         self.main_window_size: Tuple[int, int] = (0, 0)
+        self.main_window_location: Tuple[int, int] = (0, 0)
 
         self.script_commands: List[ScriptCommand] = []
         self.script_running: bool = False
@@ -357,6 +358,10 @@ class DiabloWindowMonitor:
                 self.main_diablo_window.width,
                 self.main_diablo_window.height,
             )
+            self.main_window_location = (
+                self.main_diablo_window.left,
+                self.main_diablo_window.top,
+            )
             self.main_window_label.config(text=f"当前主程序：{self.main_window_title}")
             self.main_window_abs_label.config(
                 text=f"位置：{self.main_diablo_window.left}, {self.main_diablo_window.top}"
@@ -367,6 +372,8 @@ class DiabloWindowMonitor:
 
             for row in self.window_tree_frame.window_tree.get_children():
                 self.window_tree_frame.window_tree.item(row, tags=("normal",))
+
+            self.script_frame._update_script_tree()
             # self.window_tree_frame.window_tree_frame.item(item, tags=("main",))
 
     def _on_key_press(self, event):
@@ -479,7 +486,7 @@ class DiabloWindowMonitor:
             self.mouse_rel_label.config(
                 text=f"相对千分比：(X: {rel_x*1000:.0f}‰, Y: {rel_y*1000:.0f}‰)"
             )
-        
+
         self._update_main_window_info()
 
     def _check_main_window_foreground(self) -> bool:

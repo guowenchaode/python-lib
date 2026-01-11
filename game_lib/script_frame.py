@@ -331,11 +331,11 @@ class ScriptFrame:
         self.script_status_label.config(text=status_text)
 
     def _permil_to_absolute(self, x_permil, y_permil):
-        if not self.root.main_diablo_window or not x_permil or not y_permil:
+        if not self.root.main_window_location or not x_permil or not y_permil:
             return 0, 0
 
-        abs_x = self.root.main_diablo_window.left + int(x_permil * 1000)
-        abs_y = self.root.main_diablo_window.top + int(y_permil * 1000)
+        abs_x = self.root.main_window_location[0] + int(x_permil * self.root.main_window_size[0])
+        abs_y = self.root.main_window_location[1] + int(y_permil * self.root.main_window_size[1])
         return abs_x, abs_y
 
     def _check_main_window_foreground(self):
