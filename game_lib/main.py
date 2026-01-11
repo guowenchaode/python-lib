@@ -459,9 +459,9 @@ class DiabloWindowMonitor:
                 text=f"主程序：{self.main_window_title}"
             )
 
-            for row in self.window_tree_frame.tree.get_children():
-                self.window_tree_frame.window_tree_frame.item(row, tags=("normal",))
-            self.window_tree_frame.window_tree_frame.item(item, tags=("main",))
+            for row in self.window_tree_frame.window_tree.get_children():
+                self.window_tree_frame.window_tree.item(row, tags=("normal",))
+            # self.window_tree_frame.window_tree_frame.item(item, tags=("main",))
             self._create_bubbles_by_script_status()
 
     def _toggle_bubbles_visibility(self, event=None):
@@ -774,8 +774,8 @@ class DiabloWindowMonitor:
             ]
 
             self.script_file_path = file_path
-            self.script_status_label.config(text=f"脚本状态：已加载 ({len(self.script_commands)} 条命令)")
-            self.start_script_btn.config(state=tk.NORMAL)
+            self.script_frame.script_status_label.config(text=f"脚本状态：已加载 ({len(self.script_commands)} 条命令)")
+            self.script_frame.start_script_btn.config(state=tk.NORMAL)
             messagebox.showinfo("成功", "脚本加载成功！")
         except Exception as e:
             traceback.print_exc()
