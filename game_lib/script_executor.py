@@ -17,6 +17,15 @@ class ScriptExecutor:
         self.loop = True
         self.loop_interval = CONFIG["default_loop_interval"]
 
+    def toggle_pause(self):
+        self.paused = not self.paused
+
+    def resume(self):
+        self.paused = False
+
+    def stop(self):
+        self.running = False
+
     def execute_next(self):
         try:
             cmd = self.commands[self.current_index]

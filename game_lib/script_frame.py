@@ -55,19 +55,19 @@ class ScriptFrame:
             script_ctrl_frame,
             text="启动脚本",
             command=self._start_script,
-            state=tk.DISABLED,
+            # state=tk.DISABLED,
         )
         self.pause_script_btn = ttk.Button(
             script_ctrl_frame,
             text="暂停脚本",
-            command=self._pause_script,
-            state=tk.DISABLED,
+            command=self._toggle_pause_script,
+            # state=tk.DISABLED,
         )
         self.stop_script_btn = ttk.Button(
             script_ctrl_frame,
             text="停止脚本",
             command=self._stop_script,
-            state=tk.DISABLED,
+            # state=tk.DISABLED,
         )
         self.toggle_bubble_btn = ttk.Button(
             script_ctrl_frame, text="隐藏气泡", command=self._toggle_bubbles_visibility
@@ -279,9 +279,12 @@ class ScriptFrame:
         # Start the script in a new thread
         threading.Thread(target=run_script, daemon=True).start()
 
-    def _pause_script(self):
+    def _toggle_pause_script(self):
         if self.script_executor:
-            self.script_executor.pause()
+            self.script_executor.toggle_pause()
+            self.pause_script_btn.config(
+                text="继续脚本" if self.script_executor.paused else "暂停脚本"
+            )
 
     def _stop_script(self):
         if self.script_executor:
