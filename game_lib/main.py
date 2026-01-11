@@ -1,7 +1,6 @@
 import pygetwindow as gw
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
-import threading
 import time
 import pyautogui
 import csv
@@ -13,6 +12,8 @@ from typing import Dict, List, Tuple, Optional, Any
 import pandas as pd
 import traceback
 import configparser
+from thread_manager import ThreadManager
+import threading
 
 # Import refactored modules
 from config_manager import load_settings, export_settings
@@ -255,7 +256,33 @@ class DiabloWindowMonitor:
         # 初始化UI（修改：所有控件放入content_frame）
         self._init_ui()
         self._bind_events()
-        self._start_monitor_threads()
+
+        # Replace threading logic with ThreadManager
+        self.thread_manager = ThreadManager(
+            config=CONFIG,
+            ui_callbacks={
+                "get_diablo_windows": self._get_diablo_windows,
+                "update_window_tree": self._update_window_tree,
+                "update_status_label": self._update_status_label,
+                "script_running": lambda: self.script_running,
+                "stop_on_background": lambda: self.stop_on_background,
+                "check_main_window_foreground": self._check_main_window_foreground,
+                "stop_script": self._stop_script,
+                "bubbles_visible": lambda: self.bubbles_visible,
+                "script_commands": lambda: self.script_commands,
+                "create_bubbles": self._create_bubbles_by_script_status,
+                "main_window": lambda: self.main_diablo_window,
+                "main_window_geometry": lambda: (
+                    self.main_diablo_window.left,
+                    self.main_diablo_window.top,
+                    self.main_window_size[0],
+                    self.main_window_size[1],
+                ),
+                "update_mouse_info": self._update_mouse_info,
+            },
+        )
+
+        self.thread_manager.start_threads()
 
     # ========== 核心修改2：鼠标滚轮滚动事件 ==========
     def _on_mouse_wheel(self, event):
@@ -576,17 +603,6 @@ class DiabloWindowMonitor:
         )
         self.root.bind("<F12>", self._toggle_bubbles_visibility)
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
-
-    def _start_monitor_threads(self):
-        self.window_monitor_thread = threading.Thread(
-            target=self._monitor_windows, daemon=True, name="WindowMonitorThread"
-        )
-        self.mouse_monitor_thread = threading.Thread(
-            target=self._monitor_mouse, daemon=True, name="MouseMonitorThread"
-        )
-
-        self.window_monitor_thread.start()
-        self.mouse_monitor_thread.start()
 
     def _monitor_windows(self):
         last_update_time = 0
@@ -956,87 +972,16 @@ class DiabloWindowMonitor:
         )
 
         self.script_running = True
-        self.script_paused = False
-        self.start_script_btn.config(state=tk.DISABLED)
-        self.pause_script_btn.config(state=tk.NORMAL)
-        self.stop_script_btn.config(state=tk.NORMAL)
-        self.script_status_label.config(text="脚本状态：运行中")
-
-        self.script_thread = threading.Thread(
-            target=self._run_script, daemon=True, name="ScriptExecutionThread"
-        )
-        self.script_thread.start()
+        self.script_executor.start()
 
     def _pause_script(self):
-        self.script_paused = not self.script_paused
-        if self.script_paused:
-            self.pause_script_btn.config(text="继续脚本")
-            self.script_status_label.config(text="脚本状态：暂停中")
-        else:
-            self.pause_script_btn.config(text="暂停脚本")
-            self.script_status_label.config(text="脚本状态：运行中")
+        if self.script_executor:
+            self.script_executor.pause()
 
     def _stop_script(self):
-        self.script_running = False
-        self.script_paused = False
-        self.start_script_btn.config(state=tk.NORMAL)
-        self.pause_script_btn.config(state=tk.DISABLED)
-        self.stop_script_btn.config(state=tk.DISABLED)
-        self.script_current_index = 0
-        self.script_status_label.config(text="脚本状态：已停止")
-        for cmd in self.script_commands:
-            cmd.status = "未执行"
-        self._update_script_tree()
-        self._destroy_all_bubbles()
-
-    def _run_script(self):
-        try:
-            while self.script_running and self.monitor_event.is_set():
-                while self.script_paused and self.script_running:
-                    time.sleep(0.5)
-
-                if self.script_current_index >= len(self.script_commands):
-                    self.root.after_idle(self._capture_main_window_screenshot)
-
-                    if self.script_loop:
-                        self.script_current_index = 0
-                        self.script_status_label.config(text="脚本状态：循环等待中")
-                        time.sleep(self.loop_interval)
-                    else:
-                        self.root.after_idle(self._stop_script)
-                        break
-
-                cmd = self.script_commands[self.script_current_index]
-                if cmd.source != "系统倒计时":
-                    abs_x, abs_y = self._permil_to_absolute(cmd.x, cmd.y)
-                    if self._check_main_window_foreground():
-                        pyautogui.click(abs_x, abs_y)
-                        pyautogui.press(cmd.key)
-                        cmd.status = "已执行"
-                    else:
-                        cmd.status = "主程序后台，跳过"
-                else:
-                    cmd.status = "已执行"
-                    self.root.after_idle(
-                        self.script_status_label.config,
-                        {"text": f"脚本状态：{cmd.key}"},
-                    )
-                    time.sleep(1)
-
-                self.root.after_idle(self._update_script_tree)
-                self.root.after_idle(self._scroll_to_current_command)
-                self.script_current_index += 1
-
-                if self.bubbles_visible:
-                    self.root.after_idle(self._create_bubbles_by_script_status)
-
-                time.sleep(pyautogui.PAUSE)
-
-        except Exception as e:
-            error_msg = f"脚本执行异常：{str(e)}"
-            print(error_msg)
-            self.root.after_idle(messagebox.showerror, "脚本错误", error_msg)
-            self.root.after_idle(self._stop_script)
+        if self.script_executor:
+            self.script_executor.stop()
+            self.script_running = False
 
     def _scroll_to_current_command(self):
         if self.script_current_index > 0 and self.script_tree.get_children():
